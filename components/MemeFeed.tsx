@@ -194,11 +194,13 @@ const MemeCard: React.FC<{
         <div className="p-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <UserHoverCard username={meme.author} onUserClick={onUserClick}>
-                <div 
-                  className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${meme.avatarColor} shadow-inner flex items-center justify-center font-black text-white uppercase hover:scale-105 transition-transform cursor-pointer`}
+                <div
+                  className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${meme.avatarColor} shadow-inner flex items-center justify-center font-black text-white uppercase hover:scale-105 transition-transform cursor-pointer overflow-hidden`}
                   onClick={(e) => { e.stopPropagation(); onUserClick(meme.author); }}
                 >
-                  {meme.author[0]}
+                  {meme.avatarUrl
+                    ? <img src={meme.avatarUrl} alt={meme.author} className="w-full h-full object-cover" />
+                    : meme.author[0]}
                 </div>
             </UserHoverCard>
             <div className="flex flex-col">

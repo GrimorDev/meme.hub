@@ -154,8 +154,10 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
                 <p className="font-bold text-zinc-100 group-hover:text-purple-500 transition-colors">@{meme.author}</p>
                 <p className="text-[10px] text-zinc-500 uppercase tracking-widest">{meme.timeAgo}</p>
             </div>
-            <div className={`w-12 h-12 rounded-[1.25rem] bg-gradient-to-br ${meme.avatarColor} shadow-xl flex items-center justify-center font-black text-lg text-white group-hover:scale-105 transition-transform`}>
-                {meme.author[0]}
+            <div className={`w-12 h-12 rounded-[1.25rem] bg-gradient-to-br ${meme.avatarColor} shadow-xl flex items-center justify-center font-black text-lg text-white group-hover:scale-105 transition-transform overflow-hidden`}>
+                {meme.avatarUrl
+                  ? <img src={meme.avatarUrl} alt={meme.author} className="w-full h-full object-cover" />
+                  : meme.author[0]}
             </div>
             </div>
         </UserHoverCard>

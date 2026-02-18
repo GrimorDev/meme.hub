@@ -19,7 +19,7 @@ const UserHoverCard: React.FC<UserHoverCardProps> = ({ username, children, onUse
   const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (isVisible && !userData && !disabled) {
+    if (isVisible && !disabled) {
       Promise.all([db.getUser(username), db.getUserStats(username)]).then(
         ([user, userStats]) => {
           const displayUser = user || {
@@ -33,7 +33,7 @@ const UserHoverCard: React.FC<UserHoverCardProps> = ({ username, children, onUse
         },
       );
     }
-  }, [isVisible, username, userData, disabled]);
+  }, [isVisible, username, disabled]);
 
   const handleMouseEnter = () => {
     if (disabled) return;
