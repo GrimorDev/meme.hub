@@ -1,0 +1,8 @@
+{
+  "name": "MEME.HUB - AI Meme Factory",
+  "description": "Create, roast, and explore the dankest memes with AI assistance.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

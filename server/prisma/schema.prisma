@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  email       String   @unique
+  password    String
+  avatarColor String   @default("from-purple-500 to-indigo-500")
+  avatarUrl   String?
+  bannerUrl   String?
+  description String?
+  settings    Json     @default("{\"defaultSort\":\"HOT\",\"accentColor\":\"purple\",\"hideLikeCounts\":false,\"privateProfile\":false,\"enableNotifications\":true}")
+  createdAt   DateTime @default(now())
+
+  posts        MemePost[]
+  postLikes    PostLike[]
+  commentLikes CommentLike[]
+  comments     Comment[]
+
+  @@map("users")
+}
+
+model MemePost {
+  id          String   @id @default(cuid())
+  url         String
+  caption     String
+  description String?
+  authorId    String
+  createdAt   DateTime @default(now())
+
+  author   User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  tags     PostTag[]
+  likes    PostLike[]
+  comments Comment[]
+
+  @@map("meme_posts")
+}
+
+model Tag {
+  id    String    @id @default(cuid())
+  name  String    @unique
+  posts PostTag[]
+
+  @@map("tags")
+}
+
+model PostTag {
+  postId String
+  tagId  String
+
+  post MemePost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@map("post_tags")
+}
+
+model PostLike {
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post MemePost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@map("post_likes")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  authorId  String
+  text      String
+  parentId  String?
+  createdAt DateTime @default(now())
+
+  post    MemePost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author  User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent  Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[]     @relation("CommentReplies")
+  likes   CommentLike[]
+
+  @@map("comments")
+}
+
+model CommentLike {
+  userId    String
+  commentId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@id([userId, commentId])
+  @@map("comment_likes")
+}
