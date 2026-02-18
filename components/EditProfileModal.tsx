@@ -15,13 +15,12 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, cu
   const [description, setDescription] = useState(currentUser.description || '');
   const [banner, setBanner] = useState(currentUser.bannerUrl || '');
   const [avatar, setAvatar] = useState(currentUser.avatarUrl || '');
-  
+  const [isSaving, setIsSaving] = useState(false);
+
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
-
-  const [isSaving, setIsSaving] = useState(false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
     const file = e.target.files?.[0];
