@@ -7,7 +7,7 @@ export interface UserSettings {
   defaultSort: 'HOT' | 'FRESH' | 'TOP';
   accentColor: 'purple' | 'green' | 'orange' | 'blue';
   hideLikeCounts: boolean;
-  privateProfile: boolean;
+  showJoinDate: boolean;
   enableNotifications: boolean;
 }
 
@@ -21,6 +21,7 @@ export interface User {
   password?: string;
   email?: string;
   settings?: UserSettings;
+  createdAt?: string;
 }
 
 export interface MemeTemplate {

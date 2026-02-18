@@ -27,6 +27,7 @@ services:
       NODE_ENV: production
       PORT: 4000
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      UPLOADS_DIR: /app/uploads
     volumes:
       - uploads_data:/app/uploads
     depends_on:

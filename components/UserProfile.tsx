@@ -118,9 +118,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ username, onBack, onMemeSelec
                     </p>
                 )}
 
-                <p className="text-zinc-500 font-bold text-xs flex items-center gap-2 uppercase tracking-wide">
-                    <Calendar size={14} /> Dołączył(a) w 2024
-                </p>
+                {(profileUser.settings?.showJoinDate !== false) && (
+                  <p className="text-zinc-500 font-bold text-xs flex items-center gap-2 uppercase tracking-wide">
+                      <Calendar size={14} /> Dołączył(a) {new Date((profileUser as any).createdAt || Date.now()).getFullYear()}
+                  </p>
+                )}
             </div>
 
             <div className="flex gap-4 pb-4 w-full md:w-auto">

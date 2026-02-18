@@ -24,7 +24,8 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(sessionMiddleware);
 
-app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads');
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

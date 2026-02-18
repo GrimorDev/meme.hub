@@ -214,14 +214,10 @@ const App: React.FC = () => {
               {/* Account Section */}
               <div className="space-y-4">
                  <h4 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] flex items-center gap-2">
-                    <Shield size={12} /> Konto i Bezpieczeństwo
+                    <Shield size={12} /> Konto
                  </h4>
                  <div className="space-y-2">
-                    <SettingItem label="Profil Prywatny" description="Tylko zalogowani widzą Twoją aktywność" active={user.settings?.privateProfile} onToggle={(v) => updateSetting('privateProfile', v)} />
-                    <button className="w-full flex items-center justify-between p-4 bg-zinc-950/50 rounded-2xl border border-zinc-800 hover:border-zinc-700 transition-all text-left">
-                        <span className="text-sm font-bold text-zinc-300">Zmień Hasło</span>
-                        <ChevronRight size={14} className="text-zinc-600" />
-                    </button>
+                    <SettingItem label="Pokaż datę dołączenia" description="Wyświetlaj datę rejestracji na Twoim profilu" active={user.settings?.showJoinDate} onToggle={(v) => updateSetting('showJoinDate', v)} />
                  </div>
               </div>
 
@@ -294,15 +290,16 @@ const App: React.FC = () => {
 
       <main className="max-w-[1600px] mx-auto px-4 pt-24 pb-20">
         {view === 'FEED' && (
-          <MemeFeed 
-            onMemeSelect={handleMemeSelect} 
-            user={user} 
+          <MemeFeed
+            onMemeSelect={handleMemeSelect}
+            user={user}
             onAuthRequired={() => setIsAuthModalOpen(true)}
             onUserClick={handleUserSelect}
             activeTag={activeTag}
             searchQuery={searchQuery}
             onClearFilters={() => { setActiveTag(null); setSearchQuery(''); }}
             onTagSelect={handleTagSelect}
+            hideLikeCounts={user?.settings?.hideLikeCounts ?? false}
           />
         )}
         {view === 'STUDIO' && <MemeStudio user={user} />}

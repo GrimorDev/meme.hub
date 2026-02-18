@@ -14,17 +14,19 @@ interface MemeFeedProps {
   searchQuery?: string;
   onClearFilters?: () => void;
   onTagSelect: (tag: string) => void;
+  hideLikeCounts?: boolean;
 }
 
-const MemeFeed: React.FC<MemeFeedProps> = ({ 
-  onMemeSelect, 
-  user, 
-  onAuthRequired, 
-  onUserClick, 
-  activeTag, 
-  searchQuery, 
+const MemeFeed: React.FC<MemeFeedProps> = ({
+  onMemeSelect,
+  user,
+  onAuthRequired,
+  onUserClick,
+  activeTag,
+  searchQuery,
   onClearFilters,
-  onTagSelect
+  onTagSelect,
+  hideLikeCounts = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'HOT' | 'FRESH' | 'TOP'>('HOT');
   const [posts, setPosts] = useState<MemePost[]>([]);
@@ -75,15 +77,16 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
         {posts.map((meme) => (
-          <MemeCard 
-            key={meme.id} 
-            meme={meme} 
-            onClick={() => onMemeSelect(meme)} 
-            user={user} 
+          <MemeCard
+            key={meme.id}
+            meme={meme}
+            onClick={() => onMemeSelect(meme)}
+            user={user}
             onAuthRequired={onAuthRequired}
             onUserClick={onUserClick}
             onPostChange={handlePostChange}
             onTagSelect={onTagSelect}
+            hideLikeCounts={hideLikeCounts}
           />
         ))}
       </div>
@@ -115,15 +118,16 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; icon: React.Re
   </button>
 );
 
-const MemeCard: React.FC<{ 
-    meme: MemePost; 
-    onClick: () => void; 
-    user: User | null; 
+const MemeCard: React.FC<{
+    meme: MemePost;
+    onClick: () => void;
+    user: User | null;
     onAuthRequired: () => void;
     onUserClick: (username: string) => void;
     onPostChange: () => void;
     onTagSelect: (tag: string) => void;
-}> = ({ meme, onClick, user, onAuthRequired, onUserClick, onPostChange, onTagSelect }) => {
+    hideLikeCounts?: boolean;
+}> = ({ meme, onClick, user, onAuthRequired, onUserClick, onPostChange, onTagSelect, hideLikeCounts = false }) => {
   const [isLiked, setIsLiked] = useState(user ? meme.likedBy?.includes(user.id) : false);
   const [likesCount, setLikesCount] = useState(meme.likes);
   const [showShareOptions, setShowShareOptions] = useState(false);
@@ -283,16 +287,16 @@ const MemeCard: React.FC<{
 
         <div className="p-5 mt-auto flex items-center justify-between relative">
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={handleLike}
               className={`flex items-center gap-2 px-4 py-2 rounded-2xl transition-all font-bold text-sm border ${
-                isLiked 
-                  ? 'bg-pink-500/10 border-pink-500/50 text-pink-500' 
+                isLiked
+                  ? 'bg-pink-500/10 border-pink-500/50 text-pink-500'
                   : 'bg-zinc-800/50 border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
             >
               <Heart size={18} className={isLiked ? 'fill-pink-500 animate-bounce' : ''} />
-              <span>{likesCount}</span>
+              {!hideLikeCounts && <span>{likesCount}</span>}
             </button>
             
             <button className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-zinc-800/50 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-all font-bold text-sm" onClick={(e) => e.stopPropagation()}>

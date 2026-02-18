@@ -17,7 +17,7 @@ model User {
   avatarUrl   String?
   bannerUrl   String?
   description String?
-  settings    Json     @default("{\"defaultSort\":\"HOT\",\"accentColor\":\"purple\",\"hideLikeCounts\":false,\"privateProfile\":false,\"enableNotifications\":true}")
+  settings    Json     @default("{\"defaultSort\":\"HOT\",\"accentColor\":\"purple\",\"hideLikeCounts\":false,\"showJoinDate\":true,\"enableNotifications\":true}")
   createdAt   DateTime @default(now())
 
   posts        MemePost[]
