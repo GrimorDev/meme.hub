@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Heart, Grid, User as UserIcon } from 'lucide-react';
+import { Calendar, Heart, Grid, Shield } from 'lucide-react';
 import { User } from '../types';
 import { db } from '../services/db';
 
@@ -100,11 +100,22 @@ const UserHoverCard: React.FC<UserHoverCardProps> = ({ username, children, onUse
 
                 {/* User Info */}
                 <div className="mt-3 space-y-1">
-                    <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-                        @{username}
+                    <h3 className="text-xl font-black tracking-tight flex items-center gap-2 flex-wrap">
+                        {userData.role === 'admin' ? (
+                          <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+                            @{username}
+                          </span>
+                        ) : (
+                          <span className="text-white">@{username}</span>
+                        )}
+                        {userData.role === 'admin' && (
+                          <span className="flex items-center gap-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
+                            <Shield size={9} fill="currentColor" /> Admin
+                          </span>
+                        )}
                     </h3>
                     <p className="text-xs text-zinc-500 font-medium flex items-center gap-1">
-                        <Calendar size={12} /> Dołączył(a) 2024
+                        <Calendar size={12} /> Dołączył(a) {new Date((userData as any).createdAt || Date.now()).getFullYear()}
                     </p>
                 </div>
 

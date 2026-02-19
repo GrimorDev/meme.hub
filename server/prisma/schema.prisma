@@ -22,11 +22,13 @@ model User {
   settings    Json     @default("{\"defaultSort\":\"HOT\",\"accentColor\":\"purple\",\"hideLikeCounts\":false,\"showJoinDate\":true,\"enableNotifications\":true}")
   createdAt   DateTime @default(now())
 
-  posts        MemePost[]
-  postLikes    PostLike[]
-  commentLikes CommentLike[]
-  comments     Comment[]
-  reports      Report[]
+  posts              MemePost[]
+  postLikes          PostLike[]
+  commentLikes       CommentLike[]
+  comments           Comment[]
+  reports            Report[]
+  userReports        UserReport[] @relation("UserReportTarget")
+  reportsMade        UserReport[] @relation("UserReportReporter")
 
   @@map("users")
 }
@@ -42,6 +44,20 @@ model Report {
   user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("reports")
+}
+
+model UserReport {
+  id             String   @id @default(cuid())
+  targetUserId   String
+  reporterId     String
+  reason         String
+  createdAt      DateTime @default(now())
+
+  targetUser User @relation("UserReportTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  reporter   User @relation("UserReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@unique([targetUserId, reporterId])
+  @@map("user_reports")
 }
 
 model MemePost {

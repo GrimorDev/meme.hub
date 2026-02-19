@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Trash2, Ban, Flag, Users, Image, AlertTriangle, Check, X, RefreshCw, ChevronRight } from 'lucide-react';
+import { Shield, Trash2, Ban, Flag, Users, Image, AlertTriangle, Check, X, RefreshCw, UserCheck, UserX } from 'lucide-react';
 import { db } from '../services/db';
-import { AdminUser, AdminReport, MemePost } from '../types';
+import { AdminUser, AdminReport, AdminUserReport, MemePost } from '../types';
 
-type Tab = 'reports' | 'posts' | 'users';
+type Tab = 'reports' | 'user-reports' | 'posts' | 'users';
 
 const AdminPanel: React.FC = () => {
   const [tab, setTab] = useState<Tab>('reports');
   const [reports, setReports] = useState<AdminReport[]>([]);
+  const [userReports, setUserReports] = useState<AdminUserReport[]>([]);
   const [posts, setPosts] = useState<(MemePost & { reportCount: number })[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,6 +18,7 @@ const AdminPanel: React.FC = () => {
     setLoading(true);
     try {
       if (tab === 'reports') setReports(await db.adminGetReports());
+      else if (tab === 'user-reports') setUserReports(await db.adminGetUserReports());
       else if (tab === 'posts') setPosts(await db.adminGetPosts());
       else if (tab === 'users') setUsers(await db.adminGetUsers());
     } finally {
@@ -38,9 +40,16 @@ const AdminPanel: React.FC = () => {
     });
 
   const handleDismissReport = (id: string) =>
-    confirm('Odrzucić zgłoszenie?', async () => {
+    confirm('Odrzucić zgłoszenie posta?', async () => {
       await db.adminDeleteReport(id);
       setReports(prev => prev.filter(r => r.id !== id));
+      setConfirmAction(null);
+    });
+
+  const handleDismissUserReport = (id: string) =>
+    confirm('Odrzucić zgłoszenie profilu?', async () => {
+      await db.adminDeleteUserReport(id);
+      setUserReports(prev => prev.filter(r => r.id !== id));
       setConfirmAction(null);
     });
 
@@ -48,8 +57,27 @@ const AdminPanel: React.FC = () => {
     confirm(`${banned ? 'Odbanować' : 'Zbanować'} użytkownika @${username}?`, async () => {
       const result = await db.adminBanUser(id);
       setUsers(prev => prev.map(u => u.id === id ? { ...u, banned: result.banned } : u));
+      // aktualizuj też w user-reports
+      setUserReports(prev => prev.map(r =>
+        r.targetUser.id === id ? { ...r, targetUser: { ...r.targetUser, banned: result.banned } } : r
+      ));
       setConfirmAction(null);
     });
+
+  const handleSetRole = (id: string, username: string, currentRole: string) => {
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    confirm(
+      `${newRole === 'admin' ? 'Nadać' : 'Odebrać'} rolę admina użytkownikowi @${username}?`,
+      async () => {
+        const result = await db.adminSetRole(id, newRole as 'user' | 'admin');
+        setUsers(prev => prev.map(u => u.id === id ? { ...u, role: result.role } : u));
+        setUserReports(prev => prev.map(r =>
+          r.targetUser.id === id ? { ...r, targetUser: { ...r.targetUser, role: result.role } } : r
+        ));
+        setConfirmAction(null);
+      }
+    );
+  };
 
   const TabBtn: React.FC<{ t: Tab; icon: React.ReactNode; label: string; count?: number }> = ({ t, icon, label, count }) => (
     <button
@@ -90,7 +118,8 @@ const AdminPanel: React.FC = () => {
 
       {/* Tabs */}
       <div className="flex gap-3 flex-wrap">
-        <TabBtn t="reports" icon={<Flag size={16} />} label="Zgłoszenia" count={reports.length} />
+        <TabBtn t="reports" icon={<Flag size={16} />} label="Zgłoszenia postów" count={reports.length} />
+        <TabBtn t="user-reports" icon={<Users size={16} />} label="Zgłoszenia profili" count={userReports.length} />
         <TabBtn t="posts" icon={<Image size={16} />} label="Memy" />
         <TabBtn t="users" icon={<Users size={16} />} label="Użytkownicy" />
       </div>
@@ -102,7 +131,7 @@ const AdminPanel: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* REPORTS TAB */}
+          {/* REPORTS TAB — zgłoszenia postów */}
           {tab === 'reports' && (
             <div className="space-y-4">
               {reports.length === 0 ? (
@@ -135,6 +164,63 @@ const AdminPanel: React.FC = () => {
                       className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl font-bold text-xs transition-all"
                     >
                       <X size={14} /> Odrzuć
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* USER-REPORTS TAB — zgłoszenia profili */}
+          {tab === 'user-reports' && (
+            <div className="space-y-4">
+              {userReports.length === 0 ? (
+                <div className="py-16 text-center text-zinc-600 bg-zinc-900/30 rounded-3xl border border-zinc-800">
+                  <Check size={40} className="mx-auto mb-3 text-green-500" />
+                  <p className="font-bold">Brak zgłoszeń profili!</p>
+                </div>
+              ) : userReports.map(report => (
+                <div key={report.id} className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 flex gap-6 items-center hover:border-red-900/40 transition-all">
+                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${report.targetUser.avatarColor} overflow-hidden shrink-0 flex items-center justify-center text-white font-black text-2xl`}>
+                    {report.targetUser.avatarUrl
+                      ? <img src={report.targetUser.avatarUrl} alt={report.targetUser.username} className="w-full h-full object-cover" />
+                      : report.targetUser.username[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-black text-white">@{report.targetUser.username}</span>
+                      {report.targetUser.role === 'admin' && (
+                        <span className="text-[10px] font-black bg-gradient-to-r from-purple-600 to-pink-600 text-white px-2 py-0.5 rounded-full">ADMIN</span>
+                      )}
+                      {report.targetUser.banned && (
+                        <span className="text-[10px] font-black bg-red-900/40 text-red-400 border border-red-900/40 px-2 py-0.5 rounded-full">ZBANOWANY</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="text-xs bg-red-900/30 text-red-400 border border-red-900/30 px-3 py-1 rounded-full font-bold">
+                        <Flag size={10} className="inline mr-1" />{report.reason}
+                      </span>
+                      <span className="text-xs text-zinc-500">Zgłoszone przez <span className="text-zinc-300 font-bold">@{report.reporter}</span></span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 shrink-0 flex-wrap justify-end">
+                    {report.targetUser.role !== 'admin' && (
+                      <button
+                        onClick={() => handleBanUser(report.targetUser.id, report.targetUser.username, report.targetUser.banned)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold text-xs transition-all ${
+                          report.targetUser.banned
+                            ? 'bg-green-900/20 hover:bg-green-600 text-green-500 hover:text-white border border-green-900/30'
+                            : 'bg-red-900/20 hover:bg-red-600 text-red-500 hover:text-white border border-red-900/30'
+                        }`}
+                      >
+                        <Ban size={12} /> {report.targetUser.banned ? 'Odbanuj' : 'Zbanuj'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDismissUserReport(report.id)}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl font-bold text-xs transition-all"
+                    >
+                      <X size={12} /> Odrzuć
                     </button>
                   </div>
                 </div>
@@ -181,10 +267,16 @@ const AdminPanel: React.FC = () => {
                     {u.avatarUrl ? <img src={u.avatarUrl} alt={u.username} className="w-full h-full object-cover" /> : u.username[0].toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-black text-white">@{u.username}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {u.role === 'admin' ? (
+                        <span className="font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">@{u.username}</span>
+                      ) : (
+                        <span className="font-black text-white">@{u.username}</span>
+                      )}
                       {u.role === 'admin' && (
-                        <span className="text-[10px] font-black bg-gradient-to-r from-red-600 to-orange-500 text-white px-2 py-0.5 rounded-full">ADMIN</span>
+                        <span className="text-[10px] font-black bg-gradient-to-r from-purple-600 to-pink-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Shield size={9} fill="currentColor" /> ADMIN
+                        </span>
                       )}
                       {u.banned && (
                         <span className="text-[10px] font-black bg-red-900/40 text-red-400 border border-red-900/40 px-2 py-0.5 rounded-full">ZBANOWANY</span>
@@ -192,18 +284,34 @@ const AdminPanel: React.FC = () => {
                     </div>
                     <p className="text-xs text-zinc-500 truncate">{u.email} · {u._count.posts} postów</p>
                   </div>
-                  {u.role !== 'admin' && (
+                  <div className="flex gap-2 shrink-0">
+                    {/* Zmień rolę */}
                     <button
-                      onClick={() => handleBanUser(u.id, u.username, u.banned)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs transition-all ${
-                        u.banned
-                          ? 'bg-green-900/20 hover:bg-green-600 text-green-500 hover:text-white border border-green-900/30 hover:border-green-600'
-                          : 'bg-red-900/20 hover:bg-red-600 text-red-500 hover:text-white border border-red-900/30 hover:border-red-600'
+                      onClick={() => handleSetRole(u.id, u.username, u.role)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold text-xs transition-all border ${
+                        u.role === 'admin'
+                          ? 'bg-purple-900/20 hover:bg-zinc-700 text-purple-400 hover:text-white border-purple-900/30 hover:border-zinc-600'
+                          : 'bg-zinc-800/50 hover:bg-purple-700 text-zinc-400 hover:text-white border-zinc-700 hover:border-purple-600'
                       }`}
+                      title={u.role === 'admin' ? 'Odbierz rolę admina' : 'Nadaj rolę admina'}
                     >
-                      <Ban size={14} /> {u.banned ? 'Odbanuj' : 'Zbanuj'}
+                      {u.role === 'admin' ? <UserX size={12} /> : <UserCheck size={12} />}
+                      {u.role === 'admin' ? 'Odbierz admina' : 'Nadaj admina'}
                     </button>
-                  )}
+                    {/* Ban */}
+                    {u.role !== 'admin' && (
+                      <button
+                        onClick={() => handleBanUser(u.id, u.username, u.banned)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs transition-all ${
+                          u.banned
+                            ? 'bg-green-900/20 hover:bg-green-600 text-green-500 hover:text-white border border-green-900/30 hover:border-green-600'
+                            : 'bg-red-900/20 hover:bg-red-600 text-red-500 hover:text-white border border-red-900/30 hover:border-red-600'
+                        }`}
+                      >
+                        <Ban size={14} /> {u.banned ? 'Odbanuj' : 'Zbanuj'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

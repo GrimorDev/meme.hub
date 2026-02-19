@@ -209,12 +209,21 @@ const MemeCard: React.FC<{
             </UserHoverCard>
             <div className="flex flex-col">
               <UserHoverCard username={meme.author} onUserClick={onUserClick}>
-                  <span 
+                  {meme.authorRole === 'admin' ? (
+                    <span
+                      className="font-bold text-sm tracking-tight bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent cursor-pointer"
+                      onClick={(e) => { e.stopPropagation(); onUserClick(meme.author); }}
+                    >
+                      @{meme.author}
+                    </span>
+                  ) : (
+                    <span
                       className="font-bold text-sm tracking-tight text-zinc-100 hover:text-purple-400 transition-colors cursor-pointer"
                       onClick={(e) => { e.stopPropagation(); onUserClick(meme.author); }}
-                  >
+                    >
                       @{meme.author}
-                  </span>
+                    </span>
+                  )}
               </UserHoverCard>
               <span className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest">{meme.timeAgo}</span>
             </div>

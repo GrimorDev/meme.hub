@@ -190,7 +190,11 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
                 onClick={() => onUserClick(meme.author)}
             >
             <div className="text-right hidden sm:block">
-                <p className="font-bold text-zinc-100 group-hover:text-purple-500 transition-colors">@{meme.author}</p>
+                {meme.authorRole === 'admin' ? (
+                  <p className="font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">@{meme.author}</p>
+                ) : (
+                  <p className="font-bold text-zinc-100 group-hover:text-purple-500 transition-colors">@{meme.author}</p>
+                )}
                 <p className="text-[10px] text-zinc-500 uppercase tracking-widest">{meme.timeAgo}</p>
             </div>
             <div className={`w-12 h-12 rounded-[1.25rem] bg-gradient-to-br ${meme.avatarColor} shadow-xl flex items-center justify-center font-black text-lg text-white group-hover:scale-105 transition-transform overflow-hidden`}>

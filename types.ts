@@ -46,6 +46,21 @@ export interface AdminReport {
   post: MemePost & { reportCount?: number };
 }
 
+export interface AdminUserReport {
+  id: string;
+  reason: string;
+  createdAt: string;
+  reporter: string;
+  targetUser: {
+    id: string;
+    username: string;
+    avatarColor: string;
+    avatarUrl?: string;
+    role: string;
+    banned: boolean;
+  };
+}
+
 export interface MemeTemplate {
   id: string;
   name: string;
@@ -71,6 +86,8 @@ export interface MemePost {
   likes: number;
   commentsCount: number;
   author: string;
+  authorId?: string;
+  authorRole?: 'user' | 'admin';
   timeAgo: string;
   timestamp: number;
   avatarColor: string;

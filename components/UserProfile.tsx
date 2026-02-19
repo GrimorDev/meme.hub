@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Grid, Heart, MessageCircle, Calendar, Trophy, ImageOff, Edit3, User as UserIcon, Shield } from 'lucide-react';
+import { ArrowLeft, Grid, Heart, MessageCircle, Calendar, Trophy, ImageOff, Edit3, Shield, Flag, Check, X } from 'lucide-react';
 import { MemePost, User } from '../types';
 import { db } from '../services/db';
 import EditProfileModal from './EditProfileModal';
@@ -19,6 +19,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ username, onBack, onMemeSelec
   const [stats, setStats] = useState({ postCount: 0, totalLikes: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const loadData = async () => {
     const [user, userPosts, userStats] = await Promise.all([
@@ -70,15 +71,25 @@ const UserProfile: React.FC<UserProfileProps> = ({ username, onBack, onMemeSelec
           Powrót
         </button>
 
-        {isOwnProfile && (
-            <button 
-                onClick={() => setIsEditModalOpen(true)}
-                className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 transition-all font-bold text-xs text-white"
+        <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+          {isOwnProfile ? (
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 transition-all font-bold text-xs text-white"
             >
-                <Edit3 size={16} />
-                Edytuj Profil
+              <Edit3 size={16} />
+              Edytuj Profil
             </button>
-        )}
+          ) : currentUser && (
+            <button
+              onClick={() => setShowReportModal(true)}
+              className="flex items-center gap-2 bg-black/50 hover:bg-red-900/40 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 hover:border-red-500/30 transition-all font-bold text-xs text-zinc-400 hover:text-red-400"
+            >
+              <Flag size={14} />
+              Zgłoś profil
+            </button>
+          )}
+        </div>
 
         {/* Banner */}
         <div className="w-full h-64 bg-zinc-900 rounded-[2.5rem] overflow-hidden relative border border-zinc-800">
@@ -180,13 +191,74 @@ const UserProfile: React.FC<UserProfileProps> = ({ username, onBack, onMemeSelec
       </div>
 
       {isOwnProfile && profileUser && (
-        <EditProfileModal 
-            isOpen={isEditModalOpen} 
-            onClose={() => setIsEditModalOpen(false)} 
-            currentUser={profileUser} 
+        <EditProfileModal
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            currentUser={profileUser}
             onUpdate={handleProfileUpdate}
         />
       )}
+
+      {showReportModal && profileUser && (
+        <ReportProfileModal
+          targetUserId={profileUser.id}
+          username={profileUser.username}
+          onClose={() => setShowReportModal(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+const ReportProfileModal: React.FC<{ targetUserId: string; username: string; onClose: () => void }> = ({ targetUserId, username, onClose }) => {
+  const [reason, setReason] = useState('Spam lub reklama');
+  const [sent, setSent] = useState(false);
+
+  const handleSubmit = async () => {
+    try {
+      await db.submitUserReport(targetUserId, reason);
+    } catch {
+      // ignore duplicate
+    }
+    setSent(true);
+    setTimeout(onClose, 2000);
+  };
+
+  if (sent) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 max-w-sm w-full text-center animate-in zoom-in-95">
+          <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Check size={32} />
+          </div>
+          <h3 className="text-xl font-black text-white">Zgłoszenie wysłane!</h3>
+          <p className="text-zinc-500 mt-2">Dzięki za dbanie o czystość Hubu.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-black uppercase italic text-white flex items-center gap-2">
+            <Flag size={18} /> Zgłoś profil @{username}
+          </h3>
+          <button onClick={onClose} className="p-1 text-zinc-500 hover:text-white bg-zinc-800 rounded-full"><X size={16} /></button>
+        </div>
+        <div className="space-y-3 mb-6">
+          {['Spam lub reklama', 'Obraźliwe zachowanie', 'Podszywanie się', 'Treści niedozwolone', 'Inne'].map((r) => (
+            <label key={r} className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${reason === r ? 'bg-purple-600/20 border-purple-500' : 'bg-zinc-950 border-zinc-800 hover:border-zinc-700'}`}>
+              <input type="radio" name="profileReason" value={r} checked={reason === r} onChange={() => setReason(r)} className="accent-purple-500 w-4 h-4" />
+              <span className="text-sm font-bold text-zinc-300">{r}</span>
+            </label>
+          ))}
+        </div>
+        <button onClick={handleSubmit} className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black rounded-2xl uppercase tracking-widest shadow-lg shadow-red-600/20 transition-all">
+          Wyślij Zgłoszenie
+        </button>
+      </div>
     </div>
   );
 };

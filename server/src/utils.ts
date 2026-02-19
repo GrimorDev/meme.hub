@@ -18,6 +18,8 @@ export function formatPost(post: any, currentUserId?: string) {
     caption: post.caption,
     description: post.description ?? undefined,
     author: post.author.username,
+    authorId: post.author.id,
+    authorRole: post.author.role ?? 'user',
     avatarColor: post.author.avatarColor,
     avatarUrl: post.author.avatarUrl ?? undefined,
     timeAgo: formatTimeAgo(post.createdAt),

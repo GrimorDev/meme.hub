@@ -20,7 +20,7 @@ const requireAdmin = async (req: any, res: any, next: any) => {
 };
 
 const POST_INCLUDE = {
-  author: { select: { id: true, username: true, avatarColor: true, avatarUrl: true } },
+  author: { select: { id: true, username: true, role: true, avatarColor: true, avatarUrl: true } },
   tags: { include: { tag: true } },
   likes: { select: { userId: true } },
   _count: { select: { comments: true, likes: true } },
@@ -131,7 +131,7 @@ router.post('/users/:id/ban', requireAdmin, async (req, res) => {
   }
 });
 
-// POST /api/admin/reports — utwórz zgłoszenie (dostępne dla zalogowanych)
+// POST /api/admin/reports — utwórz zgłoszenie posta (dostępne dla zalogowanych)
 router.post('/reports', requireAuth, async (req, res) => {
   try {
     const { postId, reason } = req.body as { postId?: string; reason?: string };
@@ -144,6 +144,84 @@ router.post('/reports', requireAuth, async (req, res) => {
       data: { postId, userId: req.session.userId!, reason },
     });
     res.status(201).json(report);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// POST /api/admin/user-reports — zgłoś użytkownika (zalogowani)
+router.post('/user-reports', requireAuth, async (req, res) => {
+  try {
+    const { targetUserId, reason } = req.body as { targetUserId?: string; reason?: string };
+    if (!targetUserId || !reason) { res.status(400).json({ error: 'Brak danych' }); return; }
+    if (targetUserId === req.session.userId) { res.status(400).json({ error: 'Nie możesz zgłosić siebie' }); return; }
+    const existing = await prisma.userReport.findUnique({
+      where: { targetUserId_reporterId: { targetUserId, reporterId: req.session.userId! } },
+    });
+    if (existing) { res.status(409).json({ error: 'Już zgłosiłeś tego użytkownika' }); return; }
+    const report = await prisma.userReport.create({
+      data: { targetUserId, reporterId: req.session.userId!, reason },
+    });
+    res.status(201).json(report);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// GET /api/admin/user-reports — lista zgłoszeń profili (admin)
+router.get('/user-reports', requireAdmin, async (req, res) => {
+  try {
+    const reports = await prisma.userReport.findMany({
+      include: {
+        targetUser: { select: { id: true, username: true, avatarColor: true, avatarUrl: true, role: true, banned: true } },
+        reporter: { select: { id: true, username: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(reports.map(r => ({
+      id: r.id,
+      reason: r.reason,
+      createdAt: r.createdAt,
+      reporter: r.reporter.username,
+      targetUser: r.targetUser,
+    })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// DELETE /api/admin/user-reports/:id — odrzuć zgłoszenie profilu (admin)
+router.delete('/user-reports/:id', requireAdmin, async (req, res) => {
+  try {
+    await prisma.userReport.delete({ where: { id: req.params.id } });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// POST /api/admin/users/:id/role — zmień rolę użytkownika (admin)
+router.post('/users/:id/role', requireAdmin, async (req, res) => {
+  try {
+    const { role } = req.body as { role?: string };
+    if (!role || !['user', 'admin'].includes(role)) {
+      res.status(400).json({ error: 'Nieprawidłowa rola' });
+      return;
+    }
+    // Nie można odebrać sobie roli admina
+    if (req.params.id === req.session.userId && role !== 'admin') {
+      res.status(403).json({ error: 'Nie możesz odebrać sobie roli admina' });
+      return;
+    }
+    const updated = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { role },
+    });
+    res.json({ role: updated.role });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Błąd serwera' });

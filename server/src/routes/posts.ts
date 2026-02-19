@@ -6,7 +6,7 @@ import { formatPost } from '../utils.js';
 const router = Router();
 
 const POST_INCLUDE = {
-  author: { select: { id: true, username: true, avatarColor: true, avatarUrl: true } },
+  author: { select: { id: true, username: true, role: true, avatarColor: true, avatarUrl: true } },
   tags: { include: { tag: true } },
   likes: { select: { userId: true } },
   _count: { select: { comments: true, likes: true } },

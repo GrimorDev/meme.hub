@@ -1,4 +1,4 @@
-import { MemePost, User, Comment, AdminUser, AdminReport } from '../types';
+import { MemePost, User, Comment, AdminUser, AdminReport, AdminUserReport } from '../types';
 
 const API_BASE =
   (import.meta as any).env?.VITE_API_URL !== undefined &&
@@ -222,6 +222,24 @@ class ApiClient {
   }
   async adminBanUser(id: string): Promise<{ banned: boolean }> {
     return request(`/admin/users/${id}/ban`, { method: 'POST' });
+  }
+  async adminSetRole(id: string, role: 'user' | 'admin'): Promise<{ role: string }> {
+    return request(`/admin/users/${id}/role`, {
+      method: 'POST',
+      body: JSON.stringify({ role }),
+    });
+  }
+  async submitUserReport(targetUserId: string, reason: string): Promise<void> {
+    await request('/admin/user-reports', {
+      method: 'POST',
+      body: JSON.stringify({ targetUserId, reason }),
+    });
+  }
+  async adminGetUserReports(): Promise<AdminUserReport[]> {
+    return request('/admin/user-reports');
+  }
+  async adminDeleteUserReport(id: string): Promise<void> {
+    await request(`/admin/user-reports/${id}`, { method: 'DELETE' });
   }
 
   async uploadFile(file: File): Promise<string> {
