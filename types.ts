@@ -1,5 +1,5 @@
 
-export type AppView = 'FEED' | 'STUDIO' | 'ROAST' | 'DETAIL' | 'PROFILE';
+export type AppView = 'FEED' | 'STUDIO' | 'ROAST' | 'DETAIL' | 'PROFILE' | 'ADMIN';
 
 export type SliderMode = 'SIMPLE' | 'RUNNER' | 'GRAVITY' | 'MATH' | 'VOICE' | 'DICE' | 'SHAKE';
 
@@ -22,6 +22,28 @@ export interface User {
   email?: string;
   settings?: UserSettings;
   createdAt?: string;
+  role?: 'user' | 'admin';
+  banned?: boolean;
+}
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  banned: boolean;
+  avatarColor: string;
+  avatarUrl?: string;
+  createdAt: string;
+  _count: { posts: number };
+}
+
+export interface AdminReport {
+  id: string;
+  reason: string;
+  createdAt: string;
+  reporter: string;
+  post: MemePost & { reportCount?: number };
 }
 
 export interface MemeTemplate {

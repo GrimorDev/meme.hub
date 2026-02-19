@@ -352,8 +352,9 @@ const MemeCard: React.FC<{
       )}
 
       {showReportModal && (
-          <ReportMemeModal 
-            onClose={() => setShowReportModal(false)} 
+          <ReportMemeModal
+            postId={meme.id}
+            onClose={() => setShowReportModal(false)}
           />
       )}
     </>
@@ -386,11 +387,16 @@ const EditMemeModal: React.FC<{ currentCaption: string; onClose: () => void; onS
     );
 };
 
-const ReportMemeModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-    const [reason, setReason] = useState('spam');
+const ReportMemeModal: React.FC<{ postId: string; onClose: () => void }> = ({ postId, onClose }) => {
+    const [reason, setReason] = useState('Spam lub reklama');
     const [sent, setSent] = useState(false);
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
+        try {
+            await db.submitReport(postId, reason);
+        } catch {
+            // ignore duplicate / error
+        }
         setSent(true);
         setTimeout(onClose, 2000);
     };

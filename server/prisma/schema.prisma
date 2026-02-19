@@ -13,6 +13,8 @@ model User {
   username    String   @unique
   email       String   @unique
   password    String
+  role        String   @default("user")
+  banned      Boolean  @default(false)
   avatarColor String   @default("from-purple-500 to-indigo-500")
   avatarUrl   String?
   bannerUrl   String?
@@ -24,8 +26,22 @@ model User {
   postLikes    PostLike[]
   commentLikes CommentLike[]
   comments     Comment[]
+  reports      Report[]
 
   @@map("users")
+}
+
+model Report {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  reason    String
+  createdAt DateTime @default(now())
+
+  post MemePost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("reports")
 }
 
 model MemePost {
@@ -40,6 +56,7 @@ model MemePost {
   tags     PostTag[]
   likes    PostLike[]
   comments Comment[]
+  reports  Report[]
 
   @@map("meme_posts")
 }

@@ -1,4 +1,4 @@
-import { MemePost, User, Comment } from '../types';
+import { MemePost, User, Comment, AdminUser, AdminReport } from '../types';
 
 const API_BASE =
   (import.meta as any).env?.VITE_API_URL !== undefined &&
@@ -195,6 +195,33 @@ class ApiClient {
       return { posts: [], users: [], tags: [] };
     }
     return request(`/search?q=${encodeURIComponent(query)}`);
+  }
+
+  async submitReport(postId: string, reason: string): Promise<void> {
+    await request('/admin/reports', {
+      method: 'POST',
+      body: JSON.stringify({ postId, reason }),
+    });
+  }
+
+  // Admin
+  async adminGetPosts(): Promise<(MemePost & { reportCount: number })[]> {
+    return request('/admin/posts');
+  }
+  async adminGetReports(): Promise<AdminReport[]> {
+    return request('/admin/reports');
+  }
+  async adminGetUsers(): Promise<AdminUser[]> {
+    return request('/admin/users');
+  }
+  async adminDeletePost(id: string): Promise<void> {
+    await request(`/admin/posts/${id}`, { method: 'DELETE' });
+  }
+  async adminDeleteReport(id: string): Promise<void> {
+    await request(`/admin/reports/${id}`, { method: 'DELETE' });
+  }
+  async adminBanUser(id: string): Promise<{ banned: boolean }> {
+    return request(`/admin/users/${id}/ban`, { method: 'POST' });
   }
 
   async uploadFile(file: File): Promise<string> {

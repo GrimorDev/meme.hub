@@ -7,6 +7,7 @@ import MemeStudio from './components/MemeStudio';
 import RoastStation from './components/RoastStation';
 import MemeDetail from './components/MemeDetail';
 import UserProfile from './components/UserProfile';
+import AdminPanel from './components/AdminPanel';
 import AuthModal from './components/AuthModal';
 import UploadMemeModal from './components/UploadMemeModal';
 import SearchBar from './components/SearchBar';
@@ -132,6 +133,19 @@ const App: React.FC = () => {
               <NavButton active={(view === 'FEED' || view === 'DETAIL') && !activeTag && !searchQuery} onClick={() => { setView('FEED'); setSelectedMeme(null); setActiveTag(null); setSearchQuery(''); }} icon={<LayoutGrid size={18} />} label="Feed" />
               <NavButton active={view === 'STUDIO'} onClick={() => protectedAction(() => setView('STUDIO'))} icon={<PenTool size={18} />} label="Studio" />
               <NavButton active={view === 'ROAST'} onClick={() => setView('ROAST')} icon={<Flame size={18} />} label="Roast AI" />
+              {user?.role === 'admin' && (
+                <button
+                  onClick={() => setView('ADMIN')}
+                  className={`flex items-center gap-2 px-6 py-2 rounded-full transition-all duration-300 font-bold text-sm tracking-tight ${
+                    view === 'ADMIN'
+                      ? 'bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-lg'
+                      : 'text-red-500 hover:text-white hover:bg-red-600/20'
+                  }`}
+                >
+                  <Shield size={18} />
+                  <span className="hidden lg:inline">Panel</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -166,12 +180,21 @@ const App: React.FC = () => {
             {user ? (
               <div className="flex items-center gap-3">
                 <div className="hidden lg:flex flex-col items-end">
-                   <span 
-                        onClick={() => handleUserSelect(user.username)}
-                        className={`text-xs font-black uppercase text-${accentClass}-500 cursor-pointer hover:text-${accentClass}-400`}
+                  {user.role === 'admin' ? (
+                    <span
+                      onClick={() => handleUserSelect(user.username)}
+                      className="text-xs font-black uppercase bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent cursor-pointer"
                     >
-                        @{user.username}
-                   </span>
+                      @{user.username}
+                    </span>
+                  ) : (
+                    <span
+                      onClick={() => handleUserSelect(user.username)}
+                      className={`text-xs font-black uppercase text-${accentClass}-500 cursor-pointer hover:text-${accentClass}-400`}
+                    >
+                      @{user.username}
+                    </span>
+                  )}
                    <button onClick={handleLogout} className="text-[10px] text-zinc-500 hover:text-white transition-colors uppercase font-bold flex items-center gap-1">
                      Wyloguj <LogOut size={10} />
                    </button>
@@ -315,13 +338,16 @@ const App: React.FC = () => {
           />
         )}
         {view === 'PROFILE' && selectedProfileUsername && (
-          <UserProfile 
-            username={selectedProfileUsername} 
+          <UserProfile
+            username={selectedProfileUsername}
             onBack={handleBackFromProfile}
             onMemeSelect={handleMemeSelect}
             currentUser={user}
             onUserUpdate={handleUserUpdate}
           />
+        )}
+        {view === 'ADMIN' && user?.role === 'admin' && (
+          <AdminPanel />
         )}
       </main>
 

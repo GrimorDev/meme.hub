@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Grid, Heart, MessageCircle, Calendar, Trophy, ImageOff, Edit3, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Grid, Heart, MessageCircle, Calendar, Trophy, ImageOff, Edit3, User as UserIcon, Shield } from 'lucide-react';
 import { MemePost, User } from '../types';
 import { db } from '../services/db';
 import EditProfileModal from './EditProfileModal';
@@ -107,8 +107,19 @@ const UserProfile: React.FC<UserProfileProps> = ({ username, onBack, onMemeSelec
             </div>
             
             <div className="flex-1 pb-4 space-y-2">
-                <h1 className="text-5xl font-black italic uppercase tracking-tighter text-white flex items-center gap-3 drop-shadow-xl">
-                    @{profileUser.username}
+                <h1 className="text-5xl font-black italic uppercase tracking-tighter flex items-center gap-3 drop-shadow-xl">
+                    {profileUser.role === 'admin' ? (
+                      <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+                        @{profileUser.username}
+                      </span>
+                    ) : (
+                      <span className="text-white">@{profileUser.username}</span>
+                    )}
+                    {profileUser.role === 'admin' && (
+                      <span className="flex items-center gap-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-black uppercase px-3 py-1 rounded-full shadow-lg shadow-purple-600/30">
+                        <Shield size={12} fill="currentColor" /> Admin
+                      </span>
+                    )}
                     {stats.totalLikes > 1000 && <Trophy className="text-yellow-500" fill="currentColor" size={32} />}
                 </h1>
                 

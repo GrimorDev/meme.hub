@@ -72,6 +72,10 @@ router.post('/login', async (req, res) => {
       res.status(401).json({ error: 'Nieprawidłowe dane logowania' });
       return;
     }
+    if (user.banned) {
+      res.status(403).json({ error: 'Twoje konto zostało zablokowane przez administratora.' });
+      return;
+    }
 
     req.session.userId = user.id;
     req.session.username = user.username;
