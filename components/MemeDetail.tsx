@@ -399,7 +399,7 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
       )}
 
       {showReportModal && (
-          <ReportModal onClose={() => setShowReportModal(false)} />
+          <ReportModal postId={meme.id} onClose={() => setShowReportModal(false)} />
       )}
       
       <style>{`
@@ -494,17 +494,25 @@ const EditMemeModal: React.FC<{ currentCaption: string; onClose: () => void; onS
     );
 };
 
-const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const [reason, setReason] = useState('spam');
+const ReportModal: React.FC<{ postId: string; onClose: () => void }> = ({ postId, onClose }) => {
+  const [reason, setReason] = useState('Spam lub reklama');
   const [sent, setSent] = useState(false);
+
+  const handleSubmit = async () => {
+    try {
+      await db.submitReport(postId, reason);
+    } catch {
+      // ignore duplicate
+    }
+    setSent(true);
+    setTimeout(onClose, 2000);
+  };
 
   if (sent) {
     return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm" onClick={onClose}>
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
         <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 max-w-sm w-full text-center animate-in zoom-in-95">
-          <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            ✓
-          </div>
+          <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">✓</div>
           <h3 className="text-xl font-black text-white">Zgłoszenie wysłane!</h3>
           <p className="text-zinc-500 mt-2">Dzięki za dbanie o czystość Hubu.</p>
         </div>
@@ -527,7 +535,7 @@ const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </label>
           ))}
         </div>
-        <button onClick={() => setSent(true)} className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black rounded-2xl uppercase tracking-widest transition-all">
+        <button onClick={handleSubmit} className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black rounded-2xl uppercase tracking-widest transition-all">
           Wyślij Zgłoszenie
         </button>
       </div>

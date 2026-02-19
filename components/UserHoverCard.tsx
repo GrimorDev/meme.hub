@@ -109,9 +109,7 @@ const UserHoverCard: React.FC<UserHoverCardProps> = ({ username, children, onUse
                           <span className="text-white">@{username}</span>
                         )}
                         {userData.role === 'admin' && (
-                          <span className="flex items-center gap-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
-                            <Shield size={9} fill="currentColor" /> Admin
-                          </span>
+                          <Shield size={14} className="text-pink-500 shrink-0" fill="currentColor" />
                         )}
                     </h3>
                     <p className="text-xs text-zinc-500 font-medium flex items-center gap-1">
