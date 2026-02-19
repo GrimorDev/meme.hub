@@ -119,7 +119,46 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
   const rootComments = comments.filter(c => !c.parentId);
   const getReplies = (parentId: string) => comments.filter(c => c.parentId === parentId);
 
-  const recentLikers: User[] = [];
+  const [recentLikers, setRecentLikers] = useState<User[]>([]);
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  useEffect(() => {
+    if (!meme.likedBy || meme.likedBy.length === 0) {
+      setRecentLikers([]);
+      return;
+    }
+    const top3 = meme.likedBy.slice(-3);
+    Promise.all(top3.map(id => db.getUserById(id))).then(users => {
+      setRecentLikers(users.filter(Boolean) as User[]);
+    });
+  }, [meme.likedBy]);
+
+  const handleShare = () => {
+    const url = `${window.location.origin}${window.location.pathname}?meme=${meme.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      alert('Link do mema skopiowany!');
+    }).catch(() => {
+      prompt('Skopiuj link:', url);
+    });
+  };
+
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(meme.url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      const ext = meme.url.split('.').pop()?.split('?')[0] || 'jpg';
+      a.download = `meme-${meme.id}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(meme.url, '_blank');
+    }
+  };
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-6 duration-700 w-full mx-auto space-y-8">
@@ -218,9 +257,28 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
              </div>
 
              <div className="flex items-center gap-2">
-                <ActionButton icon={<Share2 size={20} />} label="Udostępnij" />
-                <ActionButton icon={<Download size={20} />} label="Zapisz" />
-                <ActionButton icon={<Flag size={20} />} label="" />
+                <button
+                  onClick={handleShare}
+                  className="flex items-center gap-2 px-4 py-4 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 transition-all font-bold text-xs text-zinc-300"
+                >
+                  <Share2 size={20} />
+                  <span className="hidden xl:inline">Udostępnij</span>
+                </button>
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-2 px-4 py-4 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 transition-all font-bold text-xs text-zinc-300"
+                >
+                  <Download size={20} />
+                  <span className="hidden xl:inline">Zapisz</span>
+                </button>
+                {!isOwner && (
+                  <button
+                    onClick={() => setShowReportModal(true)}
+                    className="flex items-center gap-2 px-4 py-4 rounded-2xl bg-zinc-800 hover:bg-red-900/30 hover:border-red-900/50 hover:text-red-500 border border-zinc-700 transition-all font-bold text-xs text-zinc-300"
+                  >
+                    <Flag size={20} />
+                  </button>
+                )}
              </div>
           </div>
         </div>
@@ -329,11 +387,15 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
       </div>
 
       {showEditModal && (
-          <EditMemeModal 
-            currentCaption={meme.caption} 
-            onClose={() => setShowEditModal(false)} 
-            onSave={handleEdit} 
+          <EditMemeModal
+            currentCaption={meme.caption}
+            onClose={() => setShowEditModal(false)}
+            onSave={handleEdit}
           />
+      )}
+
+      {showReportModal && (
+          <ReportModal onClose={() => setShowReportModal(false)} />
       )}
       
       <style>{`
@@ -344,13 +406,6 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
     </div>
   );
 };
-
-const ActionButton: React.FC<{ icon: React.ReactNode; label: string }> = ({ icon, label }) => (
-  <button className="flex items-center gap-2 px-4 py-4 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 transition-all font-bold text-xs text-zinc-300">
-    {icon}
-    {label && <span className="hidden xl:inline">{label}</span>}
-  </button>
-);
 
 const CommentCard: React.FC<{
     comment: Comment & { authorAvatarColor?: string; authorAvatarUrl?: string };
@@ -433,6 +488,47 @@ const EditMemeModal: React.FC<{ currentCaption: string; onClose: () => void; onS
             </div>
         </div>
     );
+};
+
+const ReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [reason, setReason] = useState('spam');
+  const [sent, setSent] = useState(false);
+
+  if (sent) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm" onClick={onClose}>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 max-w-sm w-full text-center animate-in zoom-in-95">
+          <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            ✓
+          </div>
+          <h3 className="text-xl font-black text-white">Zgłoszenie wysłane!</h3>
+          <p className="text-zinc-500 mt-2">Dzięki za dbanie o czystość Hubu.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-black uppercase italic text-white flex items-center gap-2"><Flag size={18} /> Zgłoś naruszenie</h3>
+          <button onClick={onClose} className="p-1 text-zinc-500 hover:text-white bg-zinc-800 rounded-full"><X size={16} /></button>
+        </div>
+        <div className="space-y-3 mb-6">
+          {['Spam lub reklama', 'Treści obraźliwe', 'Nagość lub przemoc', 'Informacje nieprawdziwe', 'Inne'].map(r => (
+            <label key={r} className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${reason === r ? 'bg-purple-600/20 border-purple-500' : 'bg-zinc-950 border-zinc-800 hover:border-zinc-700'}`}>
+              <input type="radio" name="report-reason" value={r} checked={reason === r} onChange={() => setReason(r)} className="accent-purple-500 w-4 h-4" />
+              <span className="text-sm font-bold text-zinc-300">{r}</span>
+            </label>
+          ))}
+        </div>
+        <button onClick={() => setSent(true)} className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black rounded-2xl uppercase tracking-widest transition-all">
+          Wyślij Zgłoszenie
+        </button>
+      </div>
+    </div>
+  );
 };
 
 export default MemeDetail;

@@ -52,6 +52,7 @@ export interface MemePost {
   timeAgo: string;
   timestamp: number;
   avatarColor: string;
+  avatarUrl?: string;
   tags?: string[];
   description?: string;
   likedBy?: string[];
