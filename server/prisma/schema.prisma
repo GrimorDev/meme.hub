@@ -29,6 +29,7 @@ model User {
   reports            Report[]
   userReports        UserReport[] @relation("UserReportTarget")
   reportsMade        UserReport[] @relation("UserReportReporter")
+  templates          Template[]
 
   @@map("users")
 }
@@ -58,6 +59,19 @@ model UserReport {
 
   @@unique([targetUserId, reporterId])
   @@map("user_reports")
+}
+
+model Template {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  uploaderId  String
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  uploader User @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@map("templates")
 }
 
 model MemePost {

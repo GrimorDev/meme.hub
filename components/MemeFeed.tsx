@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Share2, MoreHorizontal, TrendingUp, Clock, Flame, Star, Twitter, Facebook, Link as LinkIcon, X, Trash2, Edit3, Flag, AlertTriangle, Check, Hash, Search } from 'lucide-react';
-import { MemePost, User } from '../types';
+import { MemePost, User, MEME_CATEGORIES } from '../types';
 import { db } from '../services/db';
 import UserHoverCard from './UserHoverCard';
 
@@ -74,6 +74,31 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Pasek kategorii */}
+      {!searchQuery && (
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => onTagSelect && onClearFilters?.()}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all ${
+              !activeTag ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/20' : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-white'
+            }`}
+          >
+            🔥 Wszystkie
+          </button>
+          {MEME_CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => onTagSelect(cat.id)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all ${
+                activeTag === cat.id ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/20' : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-white'
+              }`}
+            >
+              <span>{cat.emoji}</span> {cat.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
         {posts.map((meme) => (

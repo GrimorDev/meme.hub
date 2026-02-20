@@ -1,4 +1,4 @@
-import { MemePost, User, Comment, AdminUser, AdminReport, AdminUserReport } from '../types';
+import { MemePost, User, Comment, AdminUser, AdminReport, AdminUserReport, CommunityTemplate } from '../types';
 
 const API_BASE =
   (import.meta as any).env?.VITE_API_URL !== undefined &&
@@ -240,6 +240,23 @@ class ApiClient {
   }
   async adminDeleteUserReport(id: string): Promise<void> {
     await request(`/admin/user-reports/${id}`, { method: 'DELETE' });
+  }
+
+  // Templates
+  async getTemplates(scope: 'public' | 'mine'): Promise<CommunityTemplate[]> {
+    return request(`/templates?scope=${scope}`);
+  }
+  async addTemplate(name: string, url: string, isPublic: boolean): Promise<CommunityTemplate> {
+    return request('/templates', {
+      method: 'POST',
+      body: JSON.stringify({ name, url, isPublic }),
+    });
+  }
+  async deleteTemplate(id: string): Promise<void> {
+    await request(`/templates/${id}`, { method: 'DELETE' });
+  }
+  async toggleTemplatePublic(id: string): Promise<{ isPublic: boolean }> {
+    return request(`/templates/${id}/publish`, { method: 'PATCH' });
   }
 
   async uploadFile(file: File): Promise<string> {

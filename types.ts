@@ -67,6 +67,30 @@ export interface MemeTemplate {
   url: string;
 }
 
+export interface CommunityTemplate {
+  id: string;
+  name: string;
+  url: string;
+  isPublic: boolean;
+  createdAt: string;
+  uploader: { username: string; avatarColor: string; avatarUrl?: string };
+}
+
+export const MEME_CATEGORIES = [
+  { id: 'humor', label: 'Humor', emoji: '😂' },
+  { id: 'filmy', label: 'Filmy', emoji: '🎬' },
+  { id: 'gry', label: 'Gry', emoji: '🎮' },
+  { id: 'polityka', label: 'Polityka', emoji: '🏛️' },
+  { id: 'sport', label: 'Sport', emoji: '⚽' },
+  { id: 'wypadki', label: 'Wypadki', emoji: '💥' },
+  { id: 'zwierzeta', label: 'Zwierzęta', emoji: '🐾' },
+  { id: 'technologia', label: 'Technologia', emoji: '💻' },
+  { id: 'szkola', label: 'Szkoła', emoji: '📚' },
+  { id: 'praca', label: 'Praca', emoji: '💼' },
+  { id: 'relacje', label: 'Relacje', emoji: '❤️' },
+  { id: 'random', label: 'Random', emoji: '🎲' },
+] as const;
+
 export interface Comment {
   id: string;
   postId: string;

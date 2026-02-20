@@ -1,27 +1,30 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  Download, 
-  Sparkles, 
-  RefreshCw, 
-  Type as TypeIcon, 
-  Search, 
-  Loader2, 
-  Plus, 
-  Trash2, 
-  Move,
+import {
+  Download,
+  Sparkles,
+  Type as TypeIcon,
+  Search,
+  Loader2,
+  Plus,
+  Trash2,
   ChevronDown,
   Save,
-  Eraser,
-  Type,
   Maximize2,
   X,
   Upload,
   Bold,
-  Check
+  Check,
+  Globe,
+  Lock,
+  User as UserIcon,
+  Image as ImageIcon,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { GoogleGenAI, Type as GenAIType } from "@google/genai";
-import { MemeTextBox, User } from '../types';
+import { MemeTextBox, User, CommunityTemplate } from '../types';
+import { db } from '../services/db';
 
 interface ImgflipMeme {
   id: string;
@@ -62,6 +65,8 @@ interface Props {
   user: User | null;
 }
 
+type SidebarTab = 'imgflip' | 'community' | 'mine';
+
 const MemeStudio: React.FC<Props> = ({ user }) => {
   const [templates, setTemplates] = useState<ImgflipMeme[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<ImgflipMeme | null>(null);
@@ -72,6 +77,17 @@ const MemeStudio: React.FC<Props> = ({ user }) => {
   const [isDraftSaved, setIsDraftSaved] = useState(false);
   const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
   const [snapGuides, setSnapGuides] = useState<{ x?: number, y?: number }>({});
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('imgflip');
+  const [communityTemplates, setCommunityTemplates] = useState<CommunityTemplate[]>([]);
+  const [myTemplates, setMyTemplates] = useState<CommunityTemplate[]>([]);
+  const [isLoadingCommunity, setIsLoadingCommunity] = useState(false);
+  const [isUploadingTemplate, setIsUploadingTemplate] = useState(false);
+  const [showAddTemplate, setShowAddTemplate] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [newTemplatePublic, setNewTemplatePublic] = useState(false);
+  const [newTemplateFile, setNewTemplateFile] = useState<File | null>(null);
+  const [newTemplatePreview, setNewTemplatePreview] = useState<string | null>(null);
+  const templateFileRef = useRef<HTMLInputElement>(null);
   
   const [textBoxes, setTextBoxes] = useState<MemeTextBox[]>(DEFAULT_BOXES);
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>('1');
@@ -135,6 +151,95 @@ const MemeStudio: React.FC<Props> = ({ user }) => {
   const filteredTemplates = useMemo(() => {
     return templates.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [templates, searchTerm]);
+
+  const filteredCommunity = useMemo(() =>
+    communityTemplates.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase())),
+    [communityTemplates, searchTerm]
+  );
+  const filteredMine = useMemo(() =>
+    myTemplates.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase())),
+    [myTemplates, searchTerm]
+  );
+
+  const loadCommunityTemplates = async () => {
+    if (!user) return;
+    setIsLoadingCommunity(true);
+    try {
+      const pub = await db.getTemplates('public');
+      setCommunityTemplates(pub);
+    } finally {
+      setIsLoadingCommunity(false);
+    }
+  };
+
+  const loadMyTemplates = async () => {
+    if (!user) return;
+    setIsLoadingCommunity(true);
+    try {
+      const mine = await db.getTemplates('mine');
+      setMyTemplates(mine);
+    } finally {
+      setIsLoadingCommunity(false);
+    }
+  };
+
+  useEffect(() => {
+    if (sidebarTab === 'community') loadCommunityTemplates();
+    else if (sidebarTab === 'mine') loadMyTemplates();
+  }, [sidebarTab, user]);
+
+  const selectCommunityTemplate = (t: CommunityTemplate) => {
+    setSelectedTemplate({ id: t.id, name: t.name, url: t.url, width: 800, height: 600, box_count: 2 });
+  };
+
+  const handleTemplateFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setNewTemplateFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setNewTemplatePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAddTemplate = async () => {
+    if (!newTemplateFile || !newTemplateName.trim() || !user) return;
+    setIsUploadingTemplate(true);
+    try {
+      const url = await db.uploadFile(newTemplateFile);
+      const created = await db.addTemplate(newTemplateName.trim(), url, newTemplatePublic);
+      if (newTemplatePublic) {
+        setCommunityTemplates(prev => [created, ...prev]);
+      }
+      setMyTemplates(prev => [created, ...prev]);
+      setShowAddTemplate(false);
+      setNewTemplateName('');
+      setNewTemplateFile(null);
+      setNewTemplatePreview(null);
+      setNewTemplatePublic(false);
+      if (sidebarTab === 'imgflip') setSidebarTab('mine');
+    } finally {
+      setIsUploadingTemplate(false);
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    try {
+      await db.deleteTemplate(id);
+      setMyTemplates(prev => prev.filter(t => t.id !== id));
+      setCommunityTemplates(prev => prev.filter(t => t.id !== id));
+    } catch { /* ignore */ }
+  };
+
+  const handleTogglePublic = async (id: string) => {
+    try {
+      const result = await db.toggleTemplatePublic(id);
+      setMyTemplates(prev => prev.map(t => t.id === id ? { ...t, isPublic: result.isPublic } : t));
+      if (!result.isPublic) {
+        setCommunityTemplates(prev => prev.filter(t => t.id !== id));
+      }
+    } catch { /* ignore */ }
+  };
 
   const addTextBox = () => {
     const newBox: MemeTextBox = {
@@ -371,24 +476,178 @@ const MemeStudio: React.FC<Props> = ({ user }) => {
       <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bangers&family=Montserrat:wght@400;700;900&family=Pacifico&family=Roboto:wght@400;700;900&display=swap" rel="stylesheet" />
       
       {/* Sidebar: Baza */}
-      <div className="lg:col-span-3 space-y-4 bg-zinc-900/40 p-5 rounded-[2rem] border border-zinc-800 h-[800px] flex flex-col shadow-2xl">
-        <h2 className="text-xl font-black italic uppercase tracking-tighter text-purple-500">Baza Memów</h2>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" size={16} />
-          <input type="text" placeholder="Szukaj..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-zinc-950/50 border border-zinc-800 rounded-2xl pl-10 pr-4 py-3 text-sm focus:border-purple-500 outline-none transition-all" />
+      <div className="lg:col-span-3 space-y-3 bg-zinc-900/40 p-4 rounded-[2rem] border border-zinc-800 h-[800px] flex flex-col shadow-2xl">
+        {/* Zakładki */}
+        <div className="flex bg-zinc-950/60 p-1 rounded-2xl gap-1">
+          {([['imgflip', '🌐', 'Imgflip'], ['community', '👥', 'Community'], ['mine', '🗂️', 'Moje']] as const).map(([tab, emoji, label]) => (
+            <button
+              key={tab}
+              onClick={() => setSidebarTab(tab)}
+              className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${sidebarTab === tab ? 'bg-purple-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              {emoji} {label}
+            </button>
+          ))}
         </div>
+
+        {/* Szukaj */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" size={14} />
+          <input type="text" placeholder="Szukaj szablonu..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:border-purple-500 outline-none transition-all" />
+        </div>
+
+        {/* Przycisk dodaj szablon (Community/Moje) */}
+        {(sidebarTab === 'community' || sidebarTab === 'mine') && user && (
+          <button
+            onClick={() => setShowAddTemplate(true)}
+            className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-600/30 text-purple-400 font-bold text-xs transition-all"
+          >
+            <Plus size={14} /> Dodaj szablon
+          </button>
+        )}
+
+        {/* Lista szablonów */}
         <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
-          {isLoadingTemplates ? <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-purple-500" /></div> : (
-            <div className="grid grid-cols-2 gap-3 pb-4">
-              {filteredTemplates.map(t => (
-                <button key={t.id} onClick={() => setSelectedTemplate(t)} className={`group relative aspect-square rounded-2xl overflow-hidden border-2 transition-all duration-300 ${selectedTemplate?.id === t.id ? 'border-purple-500 shadow-xl' : 'border-transparent hover:border-zinc-700'}`}>
-                  <img src={t.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" alt={t.name} />
-                </button>
-              ))}
-            </div>
+          {/* IMGFLIP */}
+          {sidebarTab === 'imgflip' && (
+            isLoadingTemplates
+              ? <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-purple-500" /></div>
+              : <div className="grid grid-cols-2 gap-2 pb-4">
+                  {filteredTemplates.map(t => (
+                    <button key={t.id} onClick={() => setSelectedTemplate(t)} className={`group relative aspect-square rounded-xl overflow-hidden border-2 transition-all duration-300 ${selectedTemplate?.id === t.id ? 'border-purple-500 shadow-xl' : 'border-transparent hover:border-zinc-700'}`}>
+                      <img src={t.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" alt={t.name} />
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-[9px] font-bold text-white truncate">{t.name}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+          )}
+
+          {/* COMMUNITY */}
+          {sidebarTab === 'community' && (
+            isLoadingCommunity
+              ? <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-purple-500" /></div>
+              : filteredCommunity.length === 0
+                ? <div className="h-full flex flex-col items-center justify-center text-zinc-600 gap-2">
+                    <Globe size={32} />
+                    <p className="text-xs font-bold text-center">Brak szablonów community.<br/>Bądź pierwszy!</p>
+                  </div>
+                : <div className="grid grid-cols-2 gap-2 pb-4">
+                    {filteredCommunity.map(t => (
+                      <button key={t.id} onClick={() => selectCommunityTemplate(t)} className={`group relative aspect-square rounded-xl overflow-hidden border-2 transition-all duration-300 ${selectedTemplate?.id === t.id ? 'border-purple-500 shadow-xl' : 'border-transparent hover:border-zinc-700'}`}>
+                        <img src={t.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" alt={t.name} />
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <p className="text-[9px] font-bold text-white truncate">{t.name}</p>
+                          <p className="text-[8px] text-zinc-400">@{t.uploader.username}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+          )}
+
+          {/* MOJE */}
+          {sidebarTab === 'mine' && (
+            !user
+              ? <div className="h-full flex items-center justify-center text-zinc-600 text-xs font-bold">Zaloguj się</div>
+              : isLoadingCommunity
+                ? <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-purple-500" /></div>
+                : filteredMine.length === 0
+                  ? <div className="h-full flex flex-col items-center justify-center text-zinc-600 gap-2">
+                      <ImageIcon size={32} />
+                      <p className="text-xs font-bold text-center">Nie masz jeszcze<br/>własnych szablonów.</p>
+                    </div>
+                  : <div className="space-y-2 pb-4">
+                      {filteredMine.map(t => (
+                        <div key={t.id} className={`group relative flex items-center gap-3 p-2 rounded-xl border transition-all cursor-pointer ${selectedTemplate?.id === t.id ? 'border-purple-500 bg-purple-600/10' : 'border-zinc-800 hover:border-zinc-700 bg-zinc-950/40'}`}
+                          onClick={() => selectCommunityTemplate(t)}>
+                          <img src={t.url} className="w-12 h-12 rounded-lg object-cover shrink-0 border border-zinc-700" alt={t.name} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-white truncate">{t.name}</p>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              {t.isPublic
+                                ? <span className="text-[9px] text-green-500 font-bold flex items-center gap-0.5"><Globe size={8} /> Publiczny</span>
+                                : <span className="text-[9px] text-zinc-600 font-bold flex items-center gap-0.5"><Lock size={8} /> Prywatny</span>
+                              }
+                            </div>
+                          </div>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleTogglePublic(t.id); }}
+                              className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
+                              title={t.isPublic ? 'Ustaw prywatny' : 'Udostępnij publicznie'}
+                            >
+                              {t.isPublic ? <EyeOff size={12} /> : <Eye size={12} />}
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(t.id); }}
+                              className="p-1.5 rounded-lg bg-zinc-800 hover:bg-red-900/50 text-zinc-400 hover:text-red-400 transition-colors"
+                              title="Usuń"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
           )}
         </div>
       </div>
+
+      {/* Modal: dodaj szablon */}
+      {showAddTemplate && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200 space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-black uppercase italic text-white flex items-center gap-2"><Plus size={18} /> Dodaj szablon</h3>
+              <button onClick={() => { setShowAddTemplate(false); setNewTemplateFile(null); setNewTemplatePreview(null); }} className="p-1 text-zinc-500 hover:text-white bg-zinc-800 rounded-full"><X size={16} /></button>
+            </div>
+
+            <div
+              onClick={() => templateFileRef.current?.click()}
+              className={`aspect-video rounded-2xl border-2 border-dashed flex items-center justify-center cursor-pointer transition-all overflow-hidden ${newTemplatePreview ? 'border-purple-500' : 'border-zinc-700 hover:border-zinc-600'}`}
+            >
+              {newTemplatePreview
+                ? <img src={newTemplatePreview} className="w-full h-full object-contain" alt="preview" />
+                : <div className="flex flex-col items-center gap-2 text-zinc-600">
+                    <Upload size={28} />
+                    <span className="text-[10px] font-bold uppercase">Kliknij by wgrać</span>
+                  </div>
+              }
+              <input ref={templateFileRef} type="file" accept="image/*" onChange={handleTemplateFileChange} className="hidden" />
+            </div>
+
+            <input
+              type="text"
+              placeholder="Nazwa szablonu..."
+              value={newTemplateName}
+              onChange={(e) => setNewTemplateName(e.target.value)}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-purple-500 outline-none transition-all"
+            />
+
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <div
+                onClick={() => setNewTemplatePublic(!newTemplatePublic)}
+                className={`w-10 h-6 rounded-full transition-all relative ${newTemplatePublic ? 'bg-purple-600' : 'bg-zinc-700'}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow ${newTemplatePublic ? 'left-5' : 'left-1'}`} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white">Udostępnij publicznie</p>
+                <p className="text-[10px] text-zinc-500">Widoczny dla wszystkich w zakładce Community</p>
+              </div>
+            </label>
+
+            <button
+              onClick={handleAddTemplate}
+              disabled={!newTemplateFile || !newTemplateName.trim() || isUploadingTemplate}
+              className="w-full py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-2xl uppercase text-sm tracking-wider transition-all"
+            >
+              {isUploadingTemplate ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'Dodaj Szablon'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Edytor Centralny */}
       <div className="lg:col-span-6 space-y-6 lg:sticky lg:top-24 flex flex-col items-center">
