@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, TrendingUp, Clock, Flame, Star, Twitter, Facebook, Link as LinkIcon, X, Trash2, Edit3, Flag, AlertTriangle, Check, Hash, Search } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, TrendingUp, Clock, Flame, Star, Twitter, Facebook, Link as LinkIcon, X, Trash2, Edit3, Flag, AlertTriangle, Check, Hash, Search, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import { MemePost, User, MEME_CATEGORIES } from '../types';
 import { db } from '../services/db';
 import UserHoverCard from './UserHoverCard';
@@ -28,16 +28,25 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
   onTagSelect,
   hideLikeCounts = false,
 }) => {
-  const [activeTab, setActiveTab] = useState<'HOT' | 'FRESH' | 'TOP'>('HOT');
+  const [activeTab, setActiveTab] = useState<'HOT' | 'FRESH' | 'TOP' | 'NOWE'>('HOT');
   const [posts, setPosts] = useState<MemePost[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
+    setPage(1);
+  }, [activeTab, activeTag, searchQuery]);
+
+  useEffect(() => {
     (async () => {
-      const fetchedPosts = await db.getPosts(activeTab, activeTag, searchQuery);
-      setPosts(fetchedPosts);
+      const result = await db.getPosts(activeTab, activeTag, searchQuery, page);
+      setPosts(result.posts);
+      setTotalPages(result.totalPages);
+      setTotal(result.total);
     })();
-  }, [activeTab, refreshTrigger, activeTag, searchQuery]);
+  }, [activeTab, refreshTrigger, activeTag, searchQuery, page]);
 
   const handlePostChange = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -57,10 +66,10 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
             {activeTag ? `Przeglądasz memy oznaczone tagiem #${activeTag}.` : searchQuery ? `Przeszukiwanie bazy dla Twojego zapytania.` : 'Najświeższy humor prosto z Internetu.'}
           </p>
         </div>
-        
+
         <div className="flex items-center gap-4">
           {(activeTag || searchQuery) && (
-            <button 
+            <button
               onClick={onClearFilters}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800 text-zinc-300 hover:text-white font-bold text-sm border border-zinc-700 transition-all"
             >
@@ -71,6 +80,7 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
             <TabButton active={activeTab === 'HOT'} onClick={() => setActiveTab('HOT')} icon={<Flame size={16} />} label="Hot" />
             <TabButton active={activeTab === 'FRESH'} onClick={() => setActiveTab('FRESH')} icon={<Clock size={16} />} label="Fresh" />
             <TabButton active={activeTab === 'TOP'} onClick={() => setActiveTab('TOP')} icon={<Star size={16} />} label="Top" />
+            <TabButton active={activeTab === 'NOWE'} onClick={() => setActiveTab('NOWE')} icon={<Sparkles size={16} />} label="Nowe" />
           </div>
         </div>
       </div>
@@ -84,7 +94,7 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
               !activeTag ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/20' : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-white'
             }`}
           >
-            🔥 Wszystkie
+            Wszystkie
           </button>
           {MEME_CATEGORIES.map(cat => (
             <button
@@ -94,9 +104,17 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
                 activeTag === cat.id ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/20' : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-white'
               }`}
             >
-              <span>{cat.emoji}</span> {cat.label}
+              {cat.label}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* NOWE tab info banner */}
+      {activeTab === 'NOWE' && (
+        <div className="flex items-center gap-3 px-5 py-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
+          <Sparkles size={16} className="text-amber-400 shrink-0" />
+          <p className="text-amber-300 text-xs font-bold">Kolejka nowych zgłoszeń — posty czekają na zatwierdzenie przez administratora.</p>
         </div>
       )}
 
@@ -115,7 +133,7 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
           />
         ))}
       </div>
-      
+
       {posts.length === 0 && (
         <div className="py-20 text-center space-y-4 bg-zinc-900/20 rounded-[3rem] border border-zinc-800/50">
            <div className="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mx-auto text-zinc-600">
@@ -125,16 +143,44 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
            <button onClick={onClearFilters} className="text-purple-500 font-black uppercase text-xs tracking-widest hover:text-purple-400">Wróć do wszystkich</button>
         </div>
       )}
+
+      {/* Paginacja */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-4 pt-4">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="flex items-center gap-2 px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm rounded-2xl border border-zinc-700 transition-all"
+          >
+            <ChevronLeft size={16} /> Poprzednia
+          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-zinc-400 text-sm font-bold">Strona</span>
+            <span className="px-3 py-1.5 bg-purple-600 text-white font-black text-sm rounded-xl min-w-[2.5rem] text-center">{page}</span>
+            <span className="text-zinc-400 text-sm font-bold">z {totalPages}</span>
+          </div>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="flex items-center gap-2 px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm rounded-2xl border border-zinc-700 transition-all"
+          >
+            Następna <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
+      {totalPages > 1 && (
+        <p className="text-center text-zinc-600 text-xs font-medium">{total} memów łącznie</p>
+      )}
     </div>
   );
 };
 
 const TabButton: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
-  <button 
+  <button
     onClick={onClick}
-    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl transition-all duration-300 font-bold text-sm uppercase tracking-wider ${
-      active 
-        ? 'bg-zinc-800 text-white shadow-lg' 
+    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all duration-300 font-bold text-sm uppercase tracking-wider ${
+      active
+        ? 'bg-zinc-800 text-white shadow-lg'
         : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
     }`}
   >
@@ -157,7 +203,7 @@ const MemeCard: React.FC<{
   const [likesCount, setLikesCount] = useState(meme.likes);
   const [showShareOptions, setShowShareOptions] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -184,7 +230,6 @@ const MemeCard: React.FC<{
 
   const handleShare = (platform: 'twitter' | 'facebook' | 'reddit' | 'copy', e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = window.location.href;
     const text = encodeURIComponent(meme.caption);
     const memeUrl = encodeURIComponent(meme.url);
 
@@ -253,26 +298,26 @@ const MemeCard: React.FC<{
               <span className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest">{meme.timeAgo}</span>
             </div>
           </div>
-          
+
           <div className="relative">
-            <button 
-              className="w-8 h-8 flex items-center justify-center text-zinc-600 hover:text-white hover:bg-zinc-800 rounded-full transition-all" 
+            <button
+              className="w-8 h-8 flex items-center justify-center text-zinc-600 hover:text-white hover:bg-zinc-800 rounded-full transition-all"
               onClick={(e) => { e.stopPropagation(); setShowDropdown(!showDropdown); }}
             >
               <MoreHorizontal size={18} />
             </button>
-            
+
             {showDropdown && (
                 <div className="absolute top-full right-0 mt-2 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden z-20 animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
                     {isOwner ? (
                         <>
-                            <button 
+                            <button
                                 onClick={() => { setShowDropdown(false); setShowEditModal(true); }}
                                 className="w-full text-left px-4 py-3 text-sm font-bold text-zinc-300 hover:bg-zinc-800 hover:text-white flex items-center gap-2 transition-colors"
                             >
                                 <Edit3 size={14} /> Edytuj
                             </button>
-                            <button 
+                            <button
                                 onClick={() => { setShowDropdown(false); setShowDeleteModal(true); }}
                                 className="w-full text-left px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-900/20 flex items-center gap-2 transition-colors"
                             >
@@ -280,7 +325,7 @@ const MemeCard: React.FC<{
                             </button>
                         </>
                     ) : (
-                        <button 
+                        <button
                              onClick={() => { setShowDropdown(false); setShowReportModal(true); }}
                              className="w-full text-left px-4 py-3 text-sm font-bold text-zinc-300 hover:bg-zinc-800 hover:text-red-500 flex items-center gap-2 transition-colors"
                         >
@@ -291,11 +336,11 @@ const MemeCard: React.FC<{
             )}
           </div>
         </div>
-        
+
         <div className="relative aspect-[4/5] overflow-hidden bg-black flex items-center justify-center mx-3 rounded-2xl group/image">
-          <img 
-            src={meme.url} 
-            alt={meme.caption} 
+          <img
+            src={meme.url}
+            alt={meme.caption}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover/image:opacity-100 transition-opacity" />
@@ -306,8 +351,8 @@ const MemeCard: React.FC<{
             {meme.tags && meme.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {meme.tags.map(t => (
-                  <span 
-                    key={t} 
+                  <span
+                    key={t}
                     onClick={(e) => { e.stopPropagation(); onTagSelect(t); }}
                     className="text-[9px] font-bold uppercase tracking-wider bg-purple-600/40 hover:bg-purple-500/80 text-white px-2 py-0.5 rounded-full backdrop-blur-md border border-white/10 transition-colors"
                   >
@@ -332,15 +377,15 @@ const MemeCard: React.FC<{
               <Heart size={18} className={isLiked ? 'fill-pink-500 animate-bounce' : ''} />
               {!hideLikeCounts && <span>{likesCount}</span>}
             </button>
-            
+
             <button className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-zinc-800/50 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-all font-bold text-sm" onClick={(e) => e.stopPropagation()}>
               <MessageCircle size={18} />
               <span>{meme.commentsCount}</span>
             </button>
           </div>
-          
+
           <div className="relative">
-            <button 
+            <button
               className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all ${showShareOptions ? 'bg-purple-600 text-white' : 'bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-purple-600'}`}
               onClick={(e) => { e.stopPropagation(); setShowShareOptions(!showShareOptions); }}
             >
@@ -378,10 +423,10 @@ const MemeCard: React.FC<{
       )}
 
       {showEditModal && (
-          <EditMemeModal 
-            currentCaption={meme.caption} 
-            onClose={() => setShowEditModal(false)} 
-            onSave={handleEdit} 
+          <EditMemeModal
+            currentCaption={meme.caption}
+            onClose={() => setShowEditModal(false)}
+            onSave={handleEdit}
           />
       )}
 
@@ -395,6 +440,20 @@ const MemeCard: React.FC<{
   );
 };
 
+const TabButton: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all duration-300 font-bold text-sm uppercase tracking-wider ${
+      active
+        ? 'bg-zinc-800 text-white shadow-lg'
+        : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
+    }`}
+  >
+    {icon}
+    <span>{label}</span>
+  </button>
+);
+
 const EditMemeModal: React.FC<{ currentCaption: string; onClose: () => void; onSave: (val: string) => void }> = ({ currentCaption, onClose, onSave }) => {
     const [caption, setCaption] = useState(currentCaption);
 
@@ -406,9 +465,9 @@ const EditMemeModal: React.FC<{ currentCaption: string; onClose: () => void; onS
                     <button onClick={onClose} className="p-1 text-zinc-500 hover:text-white bg-zinc-800 rounded-full"><X size={16} /></button>
                 </div>
                 <div className="space-y-4">
-                    <textarea 
-                        value={caption} 
-                        onChange={(e) => setCaption(e.target.value)} 
+                    <textarea
+                        value={caption}
+                        onChange={(e) => setCaption(e.target.value)}
                         className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-4 text-white font-bold h-32 focus:border-purple-500 outline-none resize-none"
                         placeholder="Nowy opis..."
                     />

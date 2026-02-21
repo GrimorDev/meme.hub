@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Trash2, Ban, Flag, Users, Image, AlertTriangle, Check, X, RefreshCw, UserCheck, UserX } from 'lucide-react';
+import { Shield, Trash2, Ban, Flag, Users, Image, AlertTriangle, Check, X, RefreshCw, UserCheck, UserX, Sparkles } from 'lucide-react';
 import { db } from '../services/db';
 import { AdminUser, AdminReport, AdminUserReport, MemePost } from '../types';
 
@@ -77,6 +77,11 @@ const AdminPanel: React.FC = () => {
         setConfirmAction(null);
       }
     );
+  };
+
+  const handleFeaturePost = async (id: string, currentFeatured: boolean) => {
+    const result = await db.adminFeaturePost(id);
+    setPosts(prev => prev.map(p => p.id === id ? { ...p, featured: result.featured } : p));
   };
 
   const TabBtn: React.FC<{ t: Tab; icon: React.ReactNode; label: string; count?: number }> = ({ t, icon, label, count }) => (
@@ -232,9 +237,20 @@ const AdminPanel: React.FC = () => {
           {tab === 'posts' && (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {posts.map(post => (
-                <div key={post.id} className="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden hover:border-zinc-700 transition-all group">
+                <div key={post.id} className={`bg-zinc-900 border rounded-3xl overflow-hidden transition-all group ${post.featured ? 'border-green-700/50 hover:border-green-600/60' : 'border-amber-700/40 hover:border-amber-600/50'}`}>
                   <div className="relative aspect-video">
                     <img src={post.url} alt={post.caption} className="w-full h-full object-cover" />
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                      {post.featured ? (
+                        <span className="flex items-center gap-1 bg-green-600 text-white text-[10px] font-black px-2 py-1 rounded-full">
+                          <Check size={9} /> NA FEEDZIE
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 bg-amber-500 text-black text-[10px] font-black px-2 py-1 rounded-full">
+                          <Sparkles size={9} /> KOLEJKA
+                        </span>
+                      )}
+                    </div>
                     {post.reportCount > 0 && (
                       <div className="absolute top-3 right-3 flex items-center gap-1 bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-full">
                         <Flag size={10} /> {post.reportCount}
@@ -243,14 +259,26 @@ const AdminPanel: React.FC = () => {
                   </div>
                   <div className="p-4 space-y-3">
                     <p className="font-bold text-sm text-white truncate">{post.caption}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-zinc-500">@{post.author} · {post.likes} lajków</span>
-                      <button
-                        onClick={() => handleDeletePost(post.id, post.caption)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-900/20 hover:bg-red-600 text-red-500 hover:text-white rounded-xl font-bold text-xs transition-all border border-red-900/30 hover:border-red-600"
-                      >
-                        <Trash2 size={12} /> Usuń
-                      </button>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-zinc-500 truncate">@{post.author} · {post.likes} lajków</span>
+                      <div className="flex gap-1.5 shrink-0">
+                        <button
+                          onClick={() => handleFeaturePost(post.id, !!post.featured)}
+                          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-bold text-xs transition-all border ${
+                            post.featured
+                              ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white border-zinc-700'
+                              : 'bg-green-900/20 hover:bg-green-600 text-green-400 hover:text-white border-green-900/30 hover:border-green-600'
+                          }`}
+                        >
+                          <Sparkles size={11} /> {post.featured ? 'Cofnij' : 'Promuj'}
+                        </button>
+                        <button
+                          onClick={() => handleDeletePost(post.id, post.caption)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-red-900/20 hover:bg-red-600 text-red-500 hover:text-white rounded-xl font-bold text-xs transition-all border border-red-900/30 hover:border-red-600"
+                        >
+                          <Trash2 size={11} /> Usuń
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -28,6 +28,7 @@ export function formatPost(post: any, currentUserId?: string) {
     commentsCount: post._count.comments,
     tags: post.tags.map((pt: any) => pt.tag.name),
     likedBy: post.likes.map((l: any) => l.userId),
+    featured: post.featured ?? false,
   };
 }
 

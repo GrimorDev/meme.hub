@@ -146,13 +146,13 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
                       key={cat.id}
                       type="button"
                       onClick={() => toggleCategory(cat.id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
                         selectedCategories.includes(cat.id)
                           ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/20'
                           : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200'
                       }`}
                     >
-                      <span>{cat.emoji}</span> {cat.label}
+                      {cat.label}
                     </button>
                   ))}
                 </div>

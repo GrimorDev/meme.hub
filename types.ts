@@ -119,6 +119,14 @@ export interface MemePost {
   tags?: string[];
   description?: string;
   likedBy?: string[];
+  featured?: boolean;
+}
+
+export interface PaginatedPosts {
+  posts: MemePost[];
+  total: number;
+  page: number;
+  totalPages: number;
 }
 
 export interface MemeTextBox {

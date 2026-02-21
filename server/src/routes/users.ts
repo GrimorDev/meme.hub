@@ -58,6 +58,7 @@ router.get('/:username/posts', async (req, res) => {
           select: {
             id: true,
             username: true,
+            role: true,
             avatarColor: true,
             avatarUrl: true,
           },

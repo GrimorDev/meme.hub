@@ -12,45 +12,59 @@ const POST_INCLUDE = {
   _count: { select: { comments: true, likes: true } },
 } as const;
 
+const PAGE_SIZE = 15;
+
 router.get('/', async (req, res) => {
   try {
     const {
       sort = 'HOT',
       tag,
       q,
-      limit = '50',
-      offset = '0',
+      page = '1',
     } = req.query as Record<string, string>;
     const currentUserId = req.session.userId;
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const skip = (pageNum - 1) * PAGE_SIZE;
 
-    const posts = await prisma.memePost.findMany({
-      where: {
-        ...(tag
-          ? { tags: { some: { tag: { name: tag.toLowerCase() } } } }
-          : {}),
-        ...(q
-          ? {
-              OR: [
-                { caption: { contains: q, mode: 'insensitive' } },
-                {
-                  tags: {
-                    some: { tag: { name: { contains: q.toLowerCase() } } },
-                  },
+    // NOWE tab: unreviewed posts (featured = false), newest first
+    // HOT/FRESH/TOP: only featured posts
+    const isNowe = sort === 'NOWE';
+
+    const whereBase: any = {
+      ...(isNowe ? { featured: false } : { featured: true }),
+      ...(tag
+        ? { tags: { some: { tag: { name: tag.toLowerCase() } } } }
+        : {}),
+      ...(q
+        ? {
+            OR: [
+              { caption: { contains: q, mode: 'insensitive' } },
+              {
+                tags: {
+                  some: { tag: { name: { contains: q.toLowerCase() } } },
                 },
-              ],
-            }
-          : {}),
-      },
-      include: POST_INCLUDE,
-      take: Math.min(parseInt(limit) || 50, 100),
-      skip: parseInt(offset) || 0,
-    });
+              },
+            ],
+          }
+        : {}),
+    };
 
-    if (sort === 'FRESH') {
+    const [posts, total] = await Promise.all([
+      prisma.memePost.findMany({
+        where: whereBase,
+        include: POST_INCLUDE,
+        take: PAGE_SIZE,
+        skip,
+      }),
+      prisma.memePost.count({ where: whereBase }),
+    ]);
+
+    if (isNowe || sort === 'FRESH') {
       posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     } else if (sort === 'TOP') {
       posts.sort((a, b) => b._count.likes - a._count.likes);
     } else {
+      // HOT
       posts.sort((a, b) => {
         const scoreA =
           a._count.likes * 1000 + Math.floor(a.createdAt.getTime() / 1000);
@@ -60,7 +74,12 @@ router.get('/', async (req, res) => {
       });
     }
 
-    res.json(posts.map((p) => formatPost(p, currentUserId)));
+    res.json({
+      posts: posts.map((p) => formatPost(p, currentUserId)),
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / PAGE_SIZE),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Błąd serwera' });
@@ -122,6 +141,7 @@ router.post('/', requireAuth, async (req, res) => {
         url,
         description,
         authorId: req.session.userId!,
+        featured: false,
         tags: { create: tagUpserts },
       },
       include: POST_INCLUDE,

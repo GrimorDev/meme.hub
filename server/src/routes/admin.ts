@@ -38,6 +38,7 @@ router.get('/posts', requireAdmin, async (req, res) => {
     });
     res.json(posts.map(p => ({
       ...formatPost(p, req.session.userId),
+      featured: (p as any).featured,
       reports: p.reports,
       reportCount: p.reports.length,
     })));
@@ -198,6 +199,22 @@ router.delete('/user-reports/:id', requireAdmin, async (req, res) => {
   try {
     await prisma.userReport.delete({ where: { id: req.params.id } });
     res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// POST /api/admin/posts/:id/feature — promuj / cofnij post z kolejki
+router.post('/posts/:id/feature', requireAdmin, async (req, res) => {
+  try {
+    const post = await prisma.memePost.findUnique({ where: { id: req.params.id } });
+    if (!post) { res.status(404).json({ error: 'Nie znaleziono posta' }); return; }
+    const updated = await prisma.memePost.update({
+      where: { id: req.params.id },
+      data: { featured: !post.featured },
+    });
+    res.json({ featured: updated.featured });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Błąd serwera' });

@@ -1,4 +1,4 @@
-import { MemePost, User, Comment, AdminUser, AdminReport, AdminUserReport, CommunityTemplate } from '../types';
+import { MemePost, User, Comment, AdminUser, AdminReport, AdminUserReport, CommunityTemplate, PaginatedPosts } from '../types';
 
 const API_BASE =
   (import.meta as any).env?.VITE_API_URL !== undefined &&
@@ -92,14 +92,15 @@ class ApiClient {
   }
 
   async getPosts(
-    sort: 'HOT' | 'FRESH' | 'TOP' = 'HOT',
+    sort: 'HOT' | 'FRESH' | 'TOP' | 'NOWE' = 'HOT',
     tag?: string | null,
     q?: string,
-  ): Promise<MemePost[]> {
-    const params = new URLSearchParams({ sort });
+    page: number = 1,
+  ): Promise<PaginatedPosts> {
+    const params = new URLSearchParams({ sort, page: String(page) });
     if (tag) params.set('tag', tag);
     if (q) params.set('q', q);
-    return request(`/posts?${params.toString()}`);
+    return request<PaginatedPosts>(`/posts?${params.toString()}`);
   }
 
   async getPost(id: string): Promise<MemePost | null> {
@@ -240,6 +241,9 @@ class ApiClient {
   }
   async adminDeleteUserReport(id: string): Promise<void> {
     await request(`/admin/user-reports/${id}`, { method: 'DELETE' });
+  }
+  async adminFeaturePost(id: string): Promise<{ featured: boolean }> {
+    return request(`/admin/posts/${id}/feature`, { method: 'POST' });
   }
 
   // Templates

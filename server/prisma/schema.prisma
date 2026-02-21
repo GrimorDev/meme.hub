@@ -80,6 +80,7 @@ model MemePost {
   caption     String
   description String?
   authorId    String
+  featured    Boolean  @default(false)
   createdAt   DateTime @default(now())
 
   author   User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
