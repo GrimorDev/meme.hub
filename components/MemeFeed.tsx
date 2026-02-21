@@ -440,20 +440,6 @@ const MemeCard: React.FC<{
   );
 };
 
-const TabButton: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
-  <button
-    onClick={onClick}
-    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all duration-300 font-bold text-sm uppercase tracking-wider ${
-      active
-        ? 'bg-zinc-800 text-white shadow-lg'
-        : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
-    }`}
-  >
-    {icon}
-    <span>{label}</span>
-  </button>
-);
-
 const EditMemeModal: React.FC<{ currentCaption: string; onClose: () => void; onSave: (val: string) => void }> = ({ currentCaption, onClose, onSave }) => {
     const [caption, setCaption] = useState(currentCaption);
 
