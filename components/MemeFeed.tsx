@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, TrendingUp, Clock, Flame, Star, Twitter, Facebook, Link as LinkIcon, X, Trash2, Edit3, Flag, AlertTriangle, Check, Hash, Search, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, TrendingUp, Flame, Star, Twitter, Facebook, Link as LinkIcon, X, Trash2, Edit3, Flag, AlertTriangle, Check, Hash, Search, Sparkles, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
 import { MemePost, User, MEME_CATEGORIES } from '../types';
 import { db } from '../services/db';
 import UserHoverCard from './UserHoverCard';
+import CategorySideMenu from './CategorySideMenu';
 
 interface MemeFeedProps {
   onMemeSelect: (meme: MemePost) => void;
@@ -28,12 +29,13 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
   onTagSelect,
   hideLikeCounts = false,
 }) => {
-  const [activeTab, setActiveTab] = useState<'HOT' | 'FRESH' | 'TOP' | 'NOWE'>('HOT');
+  const [activeTab, setActiveTab] = useState<'HOT' | 'TOP' | 'NOWE'>('HOT');
   const [posts, setPosts] = useState<MemePost[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
 
   useEffect(() => {
     setPage(1);
@@ -56,6 +58,13 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
+      <CategorySideMenu
+        isOpen={isSideMenuOpen}
+        onClose={() => setIsSideMenuOpen(false)}
+        activeTag={activeTag ?? null}
+        onTagSelect={onTagSelect}
+        onClearFilters={onClearFilters ?? (() => {})}
+      />
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-1">
           <h2 className="text-4xl font-black italic uppercase tracking-tighter flex items-center gap-3">
@@ -76,11 +85,18 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
               <X size={16} /> Wyczyść filtry
             </button>
           )}
+          <button
+            onClick={() => setIsSideMenuOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900/50 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 font-bold text-sm transition-all"
+            title="Kategorie"
+          >
+            <Menu size={16} />
+            <span className="hidden sm:inline">Kategorie</span>
+          </button>
           <div className="flex bg-zinc-900/50 p-1 rounded-2xl border border-zinc-800 self-start md:self-auto">
-            <TabButton active={activeTab === 'HOT'} onClick={() => setActiveTab('HOT')} icon={<Flame size={16} />} label="Hot" />
-            <TabButton active={activeTab === 'FRESH'} onClick={() => setActiveTab('FRESH')} icon={<Clock size={16} />} label="Fresh" />
+            <TabButton active={activeTab === 'HOT'} onClick={() => setActiveTab('HOT')} icon={<Flame size={16} />} label="Główna" />
             <TabButton active={activeTab === 'TOP'} onClick={() => setActiveTab('TOP')} icon={<Star size={16} />} label="Top" />
-            <TabButton active={activeTab === 'NOWE'} onClick={() => setActiveTab('NOWE')} icon={<Sparkles size={16} />} label="Nowe" />
+            <TabButton active={activeTab === 'NOWE'} onClick={() => setActiveTab('NOWE')} icon={<Sparkles size={16} />} label="Nowości" />
           </div>
         </div>
       </div>

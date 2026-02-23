@@ -4,11 +4,23 @@ export type AppView = 'FEED' | 'STUDIO' | 'ROAST' | 'DETAIL' | 'PROFILE' | 'ADMI
 export type SliderMode = 'SIMPLE' | 'RUNNER' | 'GRAVITY' | 'MATH' | 'VOICE' | 'DICE' | 'SHAKE';
 
 export interface UserSettings {
-  defaultSort: 'HOT' | 'FRESH' | 'TOP';
+  defaultSort: 'HOT' | 'TOP' | 'NOWE';
   accentColor: 'purple' | 'green' | 'orange' | 'blue';
   hideLikeCounts: boolean;
   showJoinDate: boolean;
   enableNotifications: boolean;
+}
+
+export interface MemeSubcategory {
+  id: string;
+  label: string;
+}
+
+export interface MemeCategoryType {
+  id: string;
+  label: string;
+  emoji: string;
+  subcategories: MemeSubcategory[];
 }
 
 export interface User {
@@ -76,20 +88,108 @@ export interface CommunityTemplate {
   uploader: { username: string; avatarColor: string; avatarUrl?: string };
 }
 
-export const MEME_CATEGORIES = [
-  { id: 'humor', label: 'Humor', emoji: '😂' },
-  { id: 'filmy', label: 'Filmy', emoji: '🎬' },
-  { id: 'gry', label: 'Gry', emoji: '🎮' },
-  { id: 'polityka', label: 'Polityka', emoji: '🏛️' },
-  { id: 'sport', label: 'Sport', emoji: '⚽' },
-  { id: 'wypadki', label: 'Wypadki', emoji: '💥' },
-  { id: 'zwierzeta', label: 'Zwierzęta', emoji: '🐾' },
-  { id: 'technologia', label: 'Technologia', emoji: '💻' },
-  { id: 'szkola', label: 'Szkoła', emoji: '📚' },
-  { id: 'praca', label: 'Praca', emoji: '💼' },
-  { id: 'relacje', label: 'Relacje', emoji: '❤️' },
-  { id: 'random', label: 'Random', emoji: '🎲' },
-] as const;
+export const MEME_CATEGORIES: MemeCategoryType[] = [
+  {
+    id: 'humor', label: 'Humor', emoji: '😂',
+    subcategories: [
+      { id: 'humor-obrazkowy', label: 'Obrazkowy' },
+      { id: 'humor-czarny', label: 'Czarny humor' },
+      { id: 'humor-absurd', label: 'Absurd' },
+      { id: 'humor-relatable', label: 'Relatable' },
+    ],
+  },
+  {
+    id: 'filmy', label: 'Filmy', emoji: '🎬',
+    subcategories: [
+      { id: 'filmy-akcja', label: 'Akcja' },
+      { id: 'filmy-horror', label: 'Horror' },
+      { id: 'filmy-anime', label: 'Anime' },
+      { id: 'filmy-seriale', label: 'Seriale' },
+    ],
+  },
+  {
+    id: 'gry', label: 'Gry', emoji: '🎮',
+    subcategories: [
+      { id: 'gry-pc', label: 'PC' },
+      { id: 'gry-konsole', label: 'Konsole' },
+      { id: 'gry-mobile', label: 'Mobile' },
+      { id: 'gry-retro', label: 'Retro' },
+    ],
+  },
+  {
+    id: 'polityka', label: 'Polityka', emoji: '🏛️',
+    subcategories: [
+      { id: 'polityka-polska', label: 'Polska' },
+      { id: 'polityka-swiat', label: 'Świat' },
+      { id: 'polityka-memy', label: 'Memy polityczne' },
+    ],
+  },
+  {
+    id: 'sport', label: 'Sport', emoji: '⚽',
+    subcategories: [
+      { id: 'sport-pilka', label: 'Piłka nożna' },
+      { id: 'sport-koszykowka', label: 'Koszykówka' },
+      { id: 'sport-esport', label: 'Esport' },
+      { id: 'sport-inne', label: 'Inne sporty' },
+    ],
+  },
+  {
+    id: 'wypadki', label: 'Wypadki', emoji: '💥',
+    subcategories: [
+      { id: 'wypadki-epicki', label: 'Epickie faile' },
+      { id: 'wypadki-codzienne', label: 'Codzienne' },
+    ],
+  },
+  {
+    id: 'zwierzeta', label: 'Zwierzęta', emoji: '🐾',
+    subcategories: [
+      { id: 'zwierzeta-psy', label: 'Psy' },
+      { id: 'zwierzeta-koty', label: 'Koty' },
+      { id: 'zwierzeta-inne', label: 'Inne' },
+    ],
+  },
+  {
+    id: 'technologia', label: 'Technologia', emoji: '💻',
+    subcategories: [
+      { id: 'technologia-ai', label: 'AI' },
+      { id: 'technologia-programowanie', label: 'Programowanie' },
+      { id: 'technologia-gadgety', label: 'Gadżety' },
+      { id: 'technologia-it', label: 'Memy IT' },
+    ],
+  },
+  {
+    id: 'szkola', label: 'Szkoła', emoji: '📚',
+    subcategories: [
+      { id: 'szkola-podstawowa', label: 'Podstawówka' },
+      { id: 'szkola-liceum', label: 'Liceum' },
+      { id: 'szkola-studia', label: 'Studia' },
+    ],
+  },
+  {
+    id: 'praca', label: 'Praca', emoji: '💼',
+    subcategories: [
+      { id: 'praca-biuro', label: 'Biuro' },
+      { id: 'praca-zdalna', label: 'Zdalna' },
+      { id: 'praca-szef', label: 'Szef vs pracownik' },
+    ],
+  },
+  {
+    id: 'relacje', label: 'Relacje', emoji: '❤️',
+    subcategories: [
+      { id: 'relacje-zwiazki', label: 'Związki' },
+      { id: 'relacje-rodzina', label: 'Rodzina' },
+      { id: 'relacje-przyjaciele', label: 'Przyjaciele' },
+    ],
+  },
+  {
+    id: 'random', label: 'Random', emoji: '🎲',
+    subcategories: [
+      { id: 'random-cringe', label: 'Cringe' },
+      { id: 'random-nostalgia', label: 'Nostalgia' },
+      { id: 'random-inne', label: 'Inne' },
+    ],
+  },
+];
 
 export interface Comment {
   id: string;

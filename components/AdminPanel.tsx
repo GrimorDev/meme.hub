@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Trash2, Ban, Flag, Users, Image, AlertTriangle, Check, X, RefreshCw, UserCheck, UserX, Sparkles } from 'lucide-react';
+import { Shield, Trash2, Ban, Flag, Users, Image, AlertTriangle, Check, X, RefreshCw, UserCheck, UserX, Sparkles, Settings, Save } from 'lucide-react';
 import { db } from '../services/db';
 import { AdminUser, AdminReport, AdminUserReport, MemePost } from '../types';
 
-type Tab = 'reports' | 'user-reports' | 'posts' | 'users';
+type Tab = 'reports' | 'user-reports' | 'posts' | 'users' | 'settings';
 
 const AdminPanel: React.FC = () => {
   const [tab, setTab] = useState<Tab>('reports');
@@ -13,6 +13,9 @@ const AdminPanel: React.FC = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmAction, setConfirmAction] = useState<{ label: string; onConfirm: () => void } | null>(null);
+  const [topConfig, setTopConfig] = useState<{ topMetric: string; topPeriod: number }>({ topMetric: 'likes', topPeriod: 7 });
+  const [topConfigSaving, setTopConfigSaving] = useState(false);
+  const [topConfigSaved, setTopConfigSaved] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -21,12 +24,24 @@ const AdminPanel: React.FC = () => {
       else if (tab === 'user-reports') setUserReports(await db.adminGetUserReports());
       else if (tab === 'posts') setPosts(await db.adminGetPosts());
       else if (tab === 'users') setUsers(await db.adminGetUsers());
+      else if (tab === 'settings') setTopConfig(await db.getTopConfig());
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => { loadData(); }, [tab]);
+
+  const handleSaveTopConfig = async () => {
+    setTopConfigSaving(true);
+    try {
+      await db.setTopConfig(topConfig);
+      setTopConfigSaved(true);
+      setTimeout(() => setTopConfigSaved(false), 2500);
+    } finally {
+      setTopConfigSaving(false);
+    }
+  };
 
   const confirm = (label: string, action: () => void) =>
     setConfirmAction({ label, onConfirm: action });
@@ -127,6 +142,7 @@ const AdminPanel: React.FC = () => {
         <TabBtn t="user-reports" icon={<Users size={16} />} label="Zgłoszenia profili" count={userReports.length} />
         <TabBtn t="posts" icon={<Image size={16} />} label="Memy" />
         <TabBtn t="users" icon={<Users size={16} />} label="Użytkownicy" />
+        <TabBtn t="settings" icon={<Settings size={16} />} label="Ustawienia TOP" />
       </div>
 
       {/* Content */}
@@ -342,6 +358,93 @@ const AdminPanel: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* SETTINGS TAB — ustawienia zakładki TOP */}
+          {tab === 'settings' && (
+            <div className="max-w-xl space-y-8">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 space-y-8">
+
+                {/* Metryka */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-zinc-400">Metryka rankingu TOP</h3>
+                  <div className="space-y-3">
+                    {([
+                      { value: 'likes', label: 'Polubienia', desc: 'Ranking oparty wyłącznie na liczbie lajków' },
+                      { value: 'comments', label: 'Komentarze', desc: 'Ranking oparty na aktywności dyskusji' },
+                      { value: 'combined', label: 'Kombinacja', desc: '2 × polubienia + komentarze — balans między lajkami a dyskusją' },
+                    ] as const).map(({ value, label, desc }) => (
+                      <label
+                        key={value}
+                        className={`flex items-start gap-4 p-4 rounded-2xl border cursor-pointer transition-all ${
+                          topConfig.topMetric === value
+                            ? 'bg-red-600/10 border-red-500/50 text-white'
+                            : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-600'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="topMetric"
+                          value={value}
+                          checked={topConfig.topMetric === value}
+                          onChange={() => setTopConfig(prev => ({ ...prev, topMetric: value }))}
+                          className="mt-0.5 accent-red-500 w-4 h-4 shrink-0"
+                        />
+                        <div>
+                          <p className="font-black text-sm">{label}</p>
+                          <p className="text-xs text-zinc-500 mt-0.5">{desc}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Przedział czasu */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-zinc-400">Przedział czasu</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {([
+                      { value: 7, label: 'Ostatnie 7 dni' },
+                      { value: 14, label: 'Ostatnie 14 dni' },
+                      { value: 30, label: 'Ostatnie 30 dni' },
+                      { value: 90, label: 'Ostatnie 90 dni' },
+                      { value: 0, label: 'Wszystkie czasy' },
+                    ] as const).map(({ value, label }) => (
+                      <label
+                        key={value}
+                        className={`flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${
+                          topConfig.topPeriod === value
+                            ? 'bg-red-600/10 border-red-500/50 text-white'
+                            : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-600'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="topPeriod"
+                          value={value}
+                          checked={topConfig.topPeriod === value}
+                          onChange={() => setTopConfig(prev => ({ ...prev, topPeriod: value }))}
+                          className="accent-red-500 w-4 h-4 shrink-0"
+                        />
+                        <span className="font-bold text-sm">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSaveTopConfig}
+                  disabled={topConfigSaving}
+                  className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 transition-all ${
+                    topConfigSaved
+                      ? 'bg-green-600 text-white'
+                      : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/20'
+                  } disabled:opacity-60`}
+                >
+                  {topConfigSaved ? <><Check size={16} /> Zapisano!</> : topConfigSaving ? 'Zapisywanie...' : <><Save size={16} /> Zapisz ustawienia</>}
+                </button>
+              </div>
             </div>
           )}
         </>

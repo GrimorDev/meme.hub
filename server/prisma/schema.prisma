@@ -151,3 +151,12 @@ model CommentLike {
   @@id([userId, commentId])
   @@map("comment_likes")
 }
+
+model SiteConfig {
+  id        String   @id @default("singleton")
+  topMetric String   @default("likes")
+  topPeriod Int      @default(7)
+  updatedAt DateTime @updatedAt
+
+  @@map("site_config")
+}

@@ -245,4 +245,50 @@ router.post('/users/:id/role', requireAdmin, async (req, res) => {
   }
 });
 
+// GET /api/admin/config — pobierz konfigurację TOP
+router.get('/config', requireAdmin, async (_req, res) => {
+  try {
+    const config = await prisma.siteConfig.upsert({
+      where: { id: 'singleton' },
+      update: {},
+      create: { id: 'singleton', topMetric: 'likes', topPeriod: 7 },
+    });
+    res.json({ topMetric: config.topMetric, topPeriod: config.topPeriod });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// PUT /api/admin/config — zaktualizuj konfigurację TOP
+router.put('/config', requireAdmin, async (req, res) => {
+  try {
+    const { topMetric, topPeriod } = req.body as { topMetric?: string; topPeriod?: number };
+    const validMetrics = ['likes', 'comments', 'combined'];
+    const validPeriods = [0, 7, 14, 30, 90];
+    if (topMetric && !validMetrics.includes(topMetric)) {
+      res.status(400).json({ error: 'Nieprawidłowa metryka' }); return;
+    }
+    if (topPeriod !== undefined && !validPeriods.includes(topPeriod)) {
+      res.status(400).json({ error: 'Nieprawidłowy przedział czasu' }); return;
+    }
+    const config = await prisma.siteConfig.upsert({
+      where: { id: 'singleton' },
+      update: {
+        ...(topMetric !== undefined && { topMetric }),
+        ...(topPeriod !== undefined && { topPeriod }),
+      },
+      create: {
+        id: 'singleton',
+        topMetric: topMetric || 'likes',
+        topPeriod: topPeriod ?? 7,
+      },
+    });
+    res.json({ topMetric: config.topMetric, topPeriod: config.topPeriod });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
 export default router;

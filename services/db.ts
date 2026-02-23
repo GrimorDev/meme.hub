@@ -245,6 +245,12 @@ class ApiClient {
   async adminFeaturePost(id: string): Promise<{ featured: boolean }> {
     return request(`/admin/posts/${id}/feature`, { method: 'POST' });
   }
+  async getTopConfig(): Promise<{ topMetric: string; topPeriod: number }> {
+    return request('/admin/config');
+  }
+  async setTopConfig(config: { topMetric: string; topPeriod: number }): Promise<void> {
+    await request('/admin/config', { method: 'PUT', body: JSON.stringify(config) });
+  }
 
   // Templates
   async getTemplates(scope: 'public' | 'mine'): Promise<CommunityTemplate[]> {

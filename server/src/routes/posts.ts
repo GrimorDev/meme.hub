@@ -30,8 +30,19 @@ router.get('/', async (req, res) => {
     // HOT/FRESH/TOP: only featured posts
     const isNowe = sort === 'NOWE';
 
+    // Pobierz konfigurację TOP z bazy (tylko gdy sort=TOP)
+    let topMetric = 'likes';
+    let topPeriod = 7;
+    if (sort === 'TOP') {
+      const cfg = await prisma.siteConfig.findUnique({ where: { id: 'singleton' } });
+      if (cfg) { topMetric = cfg.topMetric; topPeriod = cfg.topPeriod; }
+    }
+
     const whereBase: any = {
       ...(isNowe ? { featured: false } : { featured: true }),
+      ...(sort === 'TOP' && topPeriod > 0
+        ? { createdAt: { gte: new Date(Date.now() - topPeriod * 24 * 60 * 60 * 1000) } }
+        : {}),
       ...(tag
         ? { tags: { some: { tag: { name: tag.toLowerCase() } } } }
         : {}),
@@ -59,12 +70,18 @@ router.get('/', async (req, res) => {
       prisma.memePost.count({ where: whereBase }),
     ]);
 
-    if (isNowe || sort === 'FRESH') {
+    if (isNowe) {
       posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     } else if (sort === 'TOP') {
-      posts.sort((a, b) => b._count.likes - a._count.likes);
+      if (topMetric === 'comments') {
+        posts.sort((a, b) => b._count.comments - a._count.comments);
+      } else if (topMetric === 'combined') {
+        posts.sort((a, b) => (b._count.likes * 2 + b._count.comments) - (a._count.likes * 2 + a._count.comments));
+      } else {
+        posts.sort((a, b) => b._count.likes - a._count.likes);
+      }
     } else {
-      // HOT
+      // HOT — hybrid score
       posts.sort((a, b) => {
         const scoreA =
           a._count.likes * 1000 + Math.floor(a.createdAt.getTime() / 1000);
