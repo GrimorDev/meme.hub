@@ -311,7 +311,57 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <main className="max-w-[1600px] mx-auto px-4 pt-24 pb-20">
+      {/* Mobilny dolny pasek nawigacji */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-[#0a0a0c]/95 backdrop-blur-xl border-t border-zinc-800 safe-area-inset-bottom">
+        <div className="flex items-center justify-around h-16 px-2">
+          <MobileNavBtn
+            active={(view === 'FEED' || view === 'DETAIL')}
+            onClick={() => { setView('FEED'); setSelectedMeme(null); setActiveTag(null); setSearchQuery(''); }}
+            icon={<LayoutGrid size={22} />}
+            label="Feed"
+          />
+          <MobileNavBtn
+            active={view === 'STUDIO'}
+            onClick={() => protectedAction(() => setView('STUDIO'))}
+            icon={<PenTool size={22} />}
+            label="Studio"
+          />
+          <MobileNavBtn
+            active={view === 'ROAST'}
+            onClick={() => setView('ROAST')}
+            icon={<Flame size={22} />}
+            label="Roast AI"
+          />
+          {user && (
+            <MobileNavBtn
+              active={false}
+              onClick={() => setIsUploadModalOpen(true)}
+              icon={<Plus size={22} />}
+              label="Dodaj"
+              accent
+            />
+          )}
+          {user?.role === 'admin' && (
+            <MobileNavBtn
+              active={view === 'ADMIN'}
+              onClick={() => setView('ADMIN')}
+              icon={<Shield size={22} />}
+              label="Admin"
+              danger
+            />
+          )}
+          {!user && (
+            <MobileNavBtn
+              active={false}
+              onClick={() => setIsAuthModalOpen(true)}
+              icon={<LogIn size={22} />}
+              label="Zaloguj"
+            />
+          )}
+        </div>
+      </nav>
+
+      <main className="max-w-[1600px] mx-auto px-4 pt-24 pb-24 md:pb-20">
         {view === 'FEED' && (
           <MemeFeed
             onMemeSelect={handleMemeSelect}
@@ -387,6 +437,24 @@ const SettingItem: React.FC<{ label: string; description: string; active?: boole
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${active ? 'left-7' : 'left-1'}`} />
         </button>
     </div>
+);
+
+const MobileNavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string; accent?: boolean; danger?: boolean }> = ({ active, onClick, icon, label, accent, danger }) => (
+  <button
+    onClick={onClick}
+    className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all ${
+      danger
+        ? active ? 'text-red-400' : 'text-red-600 hover:text-red-400'
+        : accent
+        ? 'text-purple-400 hover:text-purple-300'
+        : active
+        ? 'text-purple-400'
+        : 'text-zinc-600 hover:text-zinc-400'
+    }`}
+  >
+    {icon}
+    <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
+  </button>
 );
 
 const NavButton: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (

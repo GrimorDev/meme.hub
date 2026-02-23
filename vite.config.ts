@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
         react(),
         VitePWA({
           registerType: 'autoUpdate',
-          includeAssets: ['icons/icon.svg', 'icons/apple-touch-icon.svg'],
+          includeAssets: ['icons/favicon.ico', 'icons/apple-touch-icon-180x180.png', 'icons/pwa-192x192.png', 'icons/pwa-512x512.png'],
           manifest: {
             name: 'MEME.HUB',
             short_name: 'Meme.Hub',
@@ -27,9 +27,10 @@ export default defineConfig(({ mode }) => {
             scope: '/',
             lang: 'pl',
             icons: [
-              { src: '/icons/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-              { src: '/icons/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
-              { src: '/icons/apple-touch-icon.svg', sizes: '180x180', type: 'image/svg+xml' },
+              { src: '/icons/pwa-64x64.png', sizes: '64x64', type: 'image/png' },
+              { src: '/icons/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+              { src: '/icons/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+              { src: '/icons/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
             ],
           },
           workbox: {

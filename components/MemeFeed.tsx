@@ -57,7 +57,8 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
   const title = activeTag ? `Kategoria: ${activeTag}` : searchQuery ? `Wyniki dla: ${searchQuery}` : 'Centrala Mocy';
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <>
+      {/* Fixed elements — POZA space-y-8 żeby nie dostawały margin-top */}
       <CategorySideMenu
         isOpen={isSideMenuOpen}
         onClose={() => setIsSideMenuOpen(false)}
@@ -67,19 +68,19 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
         onTagSelect={onTagSelect}
         onClearFilters={onClearFilters ?? (() => {})}
       />
-
-      {/* Pływający hamburger — przyklejony do lewej krawędzi ekranu */}
+      {/* Pływający hamburger — przyklejony do lewej krawędzi */}
       <button
         onClick={() => setIsSideMenuOpen(true)}
         className="fixed left-0 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center justify-center gap-1.5 bg-zinc-900 border border-l-0 border-zinc-700 rounded-r-2xl px-2.5 py-5 text-zinc-400 hover:text-white hover:bg-zinc-800 hover:border-purple-500/60 transition-all shadow-xl shadow-black/40 group"
         title="Otwórz menu kategorii"
       >
         <Menu size={18} className="group-hover:scale-110 transition-transform" />
-        <span className="text-[9px] font-black uppercase tracking-widest writing-mode-vertical" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)' }}>
+        <span className="text-[9px] font-black uppercase tracking-widest" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
           Menu
         </span>
       </button>
 
+    <div className="space-y-8 animate-in fade-in duration-700">
       {/* Nagłówek — tytuł po lewej, zakładki + filtry po prawej */}
       <div className="flex items-center gap-4 pl-4">
         {/* Tytuł */}
@@ -170,6 +171,7 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
         <p className="text-center text-zinc-600 text-xs font-medium">{total} memów łącznie</p>
       )}
     </div>
+    </>
   );
 };
 
