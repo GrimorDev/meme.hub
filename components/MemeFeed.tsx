@@ -62,41 +62,45 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
         isOpen={isSideMenuOpen}
         onClose={() => setIsSideMenuOpen(false)}
         activeTag={activeTag ?? null}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
         onTagSelect={onTagSelect}
         onClearFilters={onClearFilters ?? (() => {})}
       />
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="space-y-1">
-          <h2 className="text-4xl font-black italic uppercase tracking-tighter flex items-center gap-3">
-            {searchQuery ? <Search className="text-purple-500" size={32} /> : <TrendingUp className="text-purple-500" size={32} />}
+
+      {/* Nagłówek — hamburger po lewej, tytuł w środku, filtry po prawej */}
+      <div className="flex items-center gap-4">
+        {/* Hamburger — LEWA strona */}
+        <button
+          onClick={() => setIsSideMenuOpen(true)}
+          className="w-11 h-11 flex items-center justify-center rounded-2xl bg-zinc-900/50 border border-zinc-800 text-zinc-400 hover:text-white hover:border-purple-500/50 hover:bg-zinc-800 transition-all shrink-0"
+          title="Otwórz menu kategorii"
+        >
+          <Menu size={20} />
+        </button>
+
+        {/* Tytuł */}
+        <div className="flex-1 min-w-0">
+          <h2 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter flex items-center gap-3 truncate">
+            {searchQuery ? <Search className="text-purple-500 shrink-0" size={28} /> : <TrendingUp className="text-purple-500 shrink-0" size={28} />}
             {title}
           </h2>
-          <p className="text-zinc-500 font-medium text-lg">
-            {activeTag ? `Przeglądasz memy oznaczone tagiem #${activeTag}.` : searchQuery ? `Przeszukiwanie bazy dla Twojego zapytania.` : 'Najświeższy humor prosto z Internetu.'}
-          </p>
         </div>
 
-        <div className="flex items-center gap-4">
+        {/* Zakładki + filtry — PRAWA strona */}
+        <div className="flex items-center gap-3 shrink-0">
           {(activeTag || searchQuery) && (
             <button
               onClick={onClearFilters}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800 text-zinc-300 hover:text-white font-bold text-sm border border-zinc-700 transition-all"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 text-zinc-300 hover:text-white font-bold text-sm border border-zinc-700 transition-all"
             >
-              <X size={16} /> Wyczyść filtry
+              <X size={14} /> <span className="hidden sm:inline">Wyczyść</span>
             </button>
           )}
-          <button
-            onClick={() => setIsSideMenuOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900/50 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 font-bold text-sm transition-all"
-            title="Kategorie"
-          >
-            <Menu size={16} />
-            <span className="hidden sm:inline">Kategorie</span>
-          </button>
-          <div className="flex bg-zinc-900/50 p-1 rounded-2xl border border-zinc-800 self-start md:self-auto">
-            <TabButton active={activeTab === 'HOT'} onClick={() => setActiveTab('HOT')} icon={<Flame size={16} />} label="Główna" />
-            <TabButton active={activeTab === 'TOP'} onClick={() => setActiveTab('TOP')} icon={<Star size={16} />} label="Top" />
-            <TabButton active={activeTab === 'NOWE'} onClick={() => setActiveTab('NOWE')} icon={<Sparkles size={16} />} label="Nowości" />
+          <div className="flex bg-zinc-900/50 p-1 rounded-2xl border border-zinc-800">
+            <TabButton active={activeTab === 'HOT'} onClick={() => setActiveTab('HOT')} icon={<Flame size={15} />} label="Główna" />
+            <TabButton active={activeTab === 'TOP'} onClick={() => setActiveTab('TOP')} icon={<Star size={15} />} label="Top" />
+            <TabButton active={activeTab === 'NOWE'} onClick={() => setActiveTab('NOWE')} icon={<Sparkles size={15} />} label="Nowości" />
           </div>
         </div>
       </div>
