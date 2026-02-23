@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Share2, MoreHorizontal, TrendingUp, Flame, Star, Twitter, Facebook, Link as LinkIcon, X, Trash2, Edit3, Flag, AlertTriangle, Check, Hash, Search, Sparkles, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
-import { MemePost, User, MEME_CATEGORIES } from '../types';
+import { MemePost, User } from '../types';
 import { db } from '../services/db';
 import UserHoverCard from './UserHoverCard';
 import CategorySideMenu from './CategorySideMenu';
@@ -68,17 +68,20 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
         onClearFilters={onClearFilters ?? (() => {})}
       />
 
-      {/* Nagłówek — hamburger po lewej, tytuł w środku, filtry po prawej */}
-      <div className="flex items-center gap-4">
-        {/* Hamburger — LEWA strona */}
-        <button
-          onClick={() => setIsSideMenuOpen(true)}
-          className="w-11 h-11 flex items-center justify-center rounded-2xl bg-zinc-900/50 border border-zinc-800 text-zinc-400 hover:text-white hover:border-purple-500/50 hover:bg-zinc-800 transition-all shrink-0"
-          title="Otwórz menu kategorii"
-        >
-          <Menu size={20} />
-        </button>
+      {/* Pływający hamburger — przyklejony do lewej krawędzi ekranu */}
+      <button
+        onClick={() => setIsSideMenuOpen(true)}
+        className="fixed left-0 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center justify-center gap-1.5 bg-zinc-900 border border-l-0 border-zinc-700 rounded-r-2xl px-2.5 py-5 text-zinc-400 hover:text-white hover:bg-zinc-800 hover:border-purple-500/60 transition-all shadow-xl shadow-black/40 group"
+        title="Otwórz menu kategorii"
+      >
+        <Menu size={18} className="group-hover:scale-110 transition-transform" />
+        <span className="text-[9px] font-black uppercase tracking-widest writing-mode-vertical" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)' }}>
+          Menu
+        </span>
+      </button>
 
+      {/* Nagłówek — tytuł po lewej, zakładki + filtry po prawej */}
+      <div className="flex items-center gap-4 pl-4">
         {/* Tytuł */}
         <div className="flex-1 min-w-0">
           <h2 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter flex items-center gap-3 truncate">
@@ -104,31 +107,6 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Pasek kategorii */}
-      {!searchQuery && (
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => onTagSelect && onClearFilters?.()}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all ${
-              !activeTag ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/20' : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-white'
-            }`}
-          >
-            Wszystkie
-          </button>
-          {MEME_CATEGORIES.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => onTagSelect(cat.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all ${
-                activeTag === cat.id ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/20' : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-white'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* NOWE tab info banner */}
       {activeTab === 'NOWE' && (
