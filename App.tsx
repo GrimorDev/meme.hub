@@ -31,6 +31,44 @@ const App: React.FC = () => {
     });
   }, []);
 
+  // ── URL ROUTING ──────────────────────────────────────────────
+  const applyURL = async (path: string, search: string) => {
+    const params = new URLSearchParams(search);
+    if (path.startsWith('/meme/')) {
+      const meme = await db.getPost(path.slice(6));
+      if (meme) { setSelectedMeme(meme); setView('DETAIL'); }
+      else { setView('FEED'); window.history.replaceState({}, '', '/'); }
+    } else if (path.startsWith('/profil/')) {
+      setSelectedProfileUsername(path.slice(8));
+      setView('PROFILE');
+    } else if (path === '/studio') {
+      setView('STUDIO');
+    } else if (path === '/roast') {
+      setView('ROAST');
+    } else if (path === '/admin') {
+      setView('ADMIN');
+    } else {
+      const tag = params.get('tag');
+      const q = params.get('q');
+      if (tag) setActiveTag(tag);
+      if (q) setSearchQuery(q);
+      setView('FEED');
+    }
+  };
+
+  useEffect(() => {
+    applyURL(window.location.pathname, window.location.search);
+    const onPop = () => {
+      setSelectedMeme(null);
+      setSelectedProfileUsername(null);
+      setActiveTag(null);
+      setSearchQuery('');
+      applyURL(window.location.pathname, window.location.search);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
   const handleLogin = (userData: User) => {
     setUser(userData);
     setIsAuthModalOpen(false);
@@ -50,6 +88,7 @@ const App: React.FC = () => {
   const handleMemeSelect = (meme: MemePost) => {
     setSelectedMeme(meme);
     setView('DETAIL');
+    window.history.pushState({}, '', `/meme/${meme.id}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -57,11 +96,13 @@ const App: React.FC = () => {
     setView('FEED');
     setSelectedMeme(null);
     setFeedRefreshTrigger(prev => prev + 1);
+    window.history.pushState({}, '', '/');
   };
 
   const handleUserSelect = (username: string) => {
     setSelectedProfileUsername(username);
     setView('PROFILE');
+    window.history.pushState({}, '', `/profil/${username}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -71,6 +112,7 @@ const App: React.FC = () => {
     setView('FEED');
     setSelectedMeme(null);
     setSelectedProfileUsername(null);
+    window.history.pushState({}, '', `/?tag=${encodeURIComponent(tag)}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -80,17 +122,20 @@ const App: React.FC = () => {
     setView('FEED');
     setSelectedMeme(null);
     setSelectedProfileUsername(null);
+    window.history.pushState({}, '', `/?q=${encodeURIComponent(query)}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleBackFromProfile = () => {
-    setView('FEED'); 
+    setView('FEED');
     setSelectedProfileUsername(null);
+    window.history.pushState({}, '', '/');
   };
 
   const handleUploadSuccess = () => {
     setFeedRefreshTrigger(prev => prev + 1);
     setView('FEED');
+    window.history.pushState({}, '', '/');
   };
 
   const updateSetting = <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
@@ -121,7 +166,7 @@ const App: React.FC = () => {
           <div className="flex items-center gap-8 shrink-0">
             <div 
               className="flex items-center gap-2 cursor-pointer group"
-              onClick={() => { setView('FEED'); setSelectedMeme(null); setActiveTag(null); setSearchQuery(''); }}
+              onClick={() => { setView('FEED'); setSelectedMeme(null); setActiveTag(null); setSearchQuery(''); window.history.pushState({}, '', '/'); }}
             >
               <div className="w-10 h-10 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(147,51,234,0.3)] group-hover:scale-110 transition-transform shrink-0">
                 <img src="/memster.png" alt="Memster" className="w-full h-full object-cover" />
@@ -130,12 +175,12 @@ const App: React.FC = () => {
             </div>
 
             <div className="hidden md:flex items-center gap-1 bg-zinc-900/50 p-1 rounded-full border border-zinc-800">
-              <NavButton active={(view === 'FEED' || view === 'DETAIL') && !activeTag && !searchQuery} onClick={() => { setView('FEED'); setSelectedMeme(null); setActiveTag(null); setSearchQuery(''); }} icon={<LayoutGrid size={18} />} label="Feed" />
-              <NavButton active={view === 'STUDIO'} onClick={() => protectedAction(() => setView('STUDIO'))} icon={<PenTool size={18} />} label="Studio" />
-              <NavButton active={view === 'ROAST'} onClick={() => setView('ROAST')} icon={<Flame size={18} />} label="Roast AI" />
+              <NavButton active={(view === 'FEED' || view === 'DETAIL') && !activeTag && !searchQuery} onClick={() => { setView('FEED'); setSelectedMeme(null); setActiveTag(null); setSearchQuery(''); window.history.pushState({}, '', '/'); }} icon={<LayoutGrid size={18} />} label="Feed" />
+              <NavButton active={view === 'STUDIO'} onClick={() => protectedAction(() => { setView('STUDIO'); window.history.pushState({}, '', '/studio'); })} icon={<PenTool size={18} />} label="Studio" />
+              <NavButton active={view === 'ROAST'} onClick={() => { setView('ROAST'); window.history.pushState({}, '', '/roast'); }} icon={<Flame size={18} />} label="Roast AI" />
               {user?.role === 'admin' && (
                 <button
-                  onClick={() => setView('ADMIN')}
+                  onClick={() => { setView('ADMIN'); window.history.pushState({}, '', '/admin'); }}
                   className={`flex items-center gap-2 px-6 py-2 rounded-full transition-all duration-300 font-bold text-sm tracking-tight ${
                     view === 'ADMIN'
                       ? 'bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-lg'
@@ -316,19 +361,19 @@ const App: React.FC = () => {
         <div className="flex items-center justify-around h-16 px-2">
           <MobileNavBtn
             active={(view === 'FEED' || view === 'DETAIL')}
-            onClick={() => { setView('FEED'); setSelectedMeme(null); setActiveTag(null); setSearchQuery(''); }}
+            onClick={() => { setView('FEED'); setSelectedMeme(null); setActiveTag(null); setSearchQuery(''); window.history.pushState({}, '', '/'); }}
             icon={<LayoutGrid size={22} />}
             label="Feed"
           />
           <MobileNavBtn
             active={view === 'STUDIO'}
-            onClick={() => protectedAction(() => setView('STUDIO'))}
+            onClick={() => protectedAction(() => { setView('STUDIO'); window.history.pushState({}, '', '/studio'); })}
             icon={<PenTool size={22} />}
             label="Studio"
           />
           <MobileNavBtn
             active={view === 'ROAST'}
-            onClick={() => setView('ROAST')}
+            onClick={() => { setView('ROAST'); window.history.pushState({}, '', '/roast'); }}
             icon={<Flame size={22} />}
             label="Roast AI"
           />
@@ -344,7 +389,7 @@ const App: React.FC = () => {
           {user?.role === 'admin' && (
             <MobileNavBtn
               active={view === 'ADMIN'}
-              onClick={() => setView('ADMIN')}
+              onClick={() => { setView('ADMIN'); window.history.pushState({}, '', '/admin'); }}
               icon={<Shield size={22} />}
               label="Admin"
               danger
@@ -370,7 +415,7 @@ const App: React.FC = () => {
             onUserClick={handleUserSelect}
             activeTag={activeTag}
             searchQuery={searchQuery}
-            onClearFilters={() => { setActiveTag(null); setSearchQuery(''); }}
+            onClearFilters={() => { setActiveTag(null); setSearchQuery(''); window.history.pushState({}, '', '/'); }}
             onTagSelect={handleTagSelect}
             hideLikeCounts={user?.settings?.hideLikeCounts ?? false}
           />
@@ -410,7 +455,7 @@ const App: React.FC = () => {
       <UploadMemeModal 
         isOpen={isUploadModalOpen} 
         onClose={() => setIsUploadModalOpen(false)} 
-        onSwitchToStudio={() => { setIsUploadModalOpen(false); setView('STUDIO'); }}
+        onSwitchToStudio={() => { setIsUploadModalOpen(false); setView('STUDIO'); window.history.pushState({}, '', '/studio'); }}
         onUploadSuccess={handleUploadSuccess}
         user={user}
       />
