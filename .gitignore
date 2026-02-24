@@ -37,3 +37,7 @@ uploads/
 
 # Claude Code
 .claude/
+
+# Electron build output
+electron/node_modules/
+electron/release/

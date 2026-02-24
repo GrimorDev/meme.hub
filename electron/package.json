@@ -1,0 +1,57 @@
+{
+  "name": "memster-desktop",
+  "version": "1.0.0",
+  "description": "Memster - aplikacja desktopowa",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux",
+    "dist": "electron-builder --win --linux"
+  },
+  "build": {
+    "appId": "pl.memster.desktop",
+    "productName": "Memster",
+    "copyright": "Copyright © 2025 Memster",
+    "icon": "icon.png",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "icon.png"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Memster"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.social-networking"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Network"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  }
+}
