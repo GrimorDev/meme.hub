@@ -1,6 +1,6 @@
 {
-  "name": "MEME.HUB - AI Meme Factory",
-  "description": "Create, roast, and explore the dankest memes with AI assistance.",
+  "name": "Memster",
+  "description": "Przeglądaj, twórz i oceniaj memy z pomocą AI.",
   "requestFramePermissions": [
     "camera",
     "microphone"

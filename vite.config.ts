@@ -16,9 +16,9 @@ export default defineConfig(({ mode }) => {
           registerType: 'autoUpdate',
           includeAssets: ['icons/favicon.ico', 'icons/apple-touch-icon-180x180.png', 'icons/pwa-192x192.png', 'icons/pwa-512x512.png'],
           manifest: {
-            name: 'MEME.HUB',
-            short_name: 'Meme.Hub',
-            description: 'Twoja Fabryka Mocy — najśmieszniejsze memy w jednym miejscu',
+            name: 'Memster',
+            short_name: 'Memster',
+            description: 'Memster — najśmieszniejsze memy w jednym miejscu',
             theme_color: '#a855f7',
             background_color: '#0a0a0c',
             display: 'standalone',

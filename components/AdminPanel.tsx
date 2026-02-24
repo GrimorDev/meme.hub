@@ -126,7 +126,7 @@ const AdminPanel: React.FC = () => {
             </div>
             Panel Admina
           </h1>
-          <p className="text-zinc-500 font-medium mt-1">Zarządzaj treścią i użytkownikami Meme.Hub</p>
+          <p className="text-zinc-500 font-medium mt-1">Zarządzaj treścią i użytkownikami Memster</p>
         </div>
         <button
           onClick={loadData}

@@ -126,7 +126,7 @@ const App: React.FC = () => {
               <div className={`w-10 h-10 bg-gradient-to-tr from-${accentClass}-600 to-pink-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(147,51,234,0.3)] group-hover:scale-110 transition-transform`}>
                 <Zap className="text-white fill-white" size={20} />
               </div>
-              <span className="text-xl font-black tracking-tighter uppercase italic hidden lg:block">MEME.HUB</span>
+              <span className="text-xl font-black tracking-tighter uppercase italic hidden lg:block">MEMSTER</span>
             </div>
 
             <div className="hidden md:flex items-center gap-1 bg-zinc-900/50 p-1 rounded-full border border-zinc-800">
@@ -305,7 +305,7 @@ const App: React.FC = () => {
                 >
                     Wyloguj się
                 </button>
-                <p className="text-[8px] text-zinc-600 mt-4 text-center italic">Wszystkie ustawienia są zapisywane w Twoim profilu Meme.Hub</p>
+                <p className="text-[8px] text-zinc-600 mt-4 text-center italic">Wszystkie ustawienia są zapisywane w Twoim profilu Memster</p>
               </div>
            </div>
         </div>

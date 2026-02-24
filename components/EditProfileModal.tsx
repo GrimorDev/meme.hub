@@ -66,7 +66,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, cu
 
         <div className="p-8 pb-4">
             <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">Edytuj Profil</h2>
-            <p className="text-zinc-500 text-sm font-medium">Dostosuj swój wygląd w Meme Hub.</p>
+            <p className="text-zinc-500 text-sm font-medium">Dostosuj swój wygląd w Memster.</p>
         </div>
 
         <div className="flex-1 overflow-y-auto p-8 pt-0 space-y-6 custom-scrollbar">
