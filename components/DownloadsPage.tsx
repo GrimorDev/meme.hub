@@ -1,0 +1,134 @@
+
+import React from 'react';
+import { Monitor, Download, Shield, Zap, Star, ArrowLeft, CheckCircle2, Info } from 'lucide-react';
+
+interface DownloadsPageProps {
+  onBack: () => void;
+}
+
+const DownloadsPage: React.FC<DownloadsPageProps> = ({ onBack }) => {
+  const handleDownload = () => {
+    const a = document.createElement('a');
+    a.href = '/downloads/Memster-Setup.exe';
+    a.download = 'Memster-Setup.exe';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto py-6">
+      {/* Powrót */}
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors mb-8 text-sm font-bold"
+      >
+        <ArrowLeft size={16} />
+        Wróć do feedu
+      </button>
+
+      {/* Nagłówek */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-black uppercase tracking-tight text-white mb-1">
+          Aplikacja desktopowa
+        </h1>
+        <p className="text-zinc-400">
+          Pobierz Memster na swój komputer i korzystaj z pełnej funkcjonalności.
+        </p>
+      </div>
+
+      {/* Główna karta pobierania */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-4">
+        {/* Ikona + nazwa */}
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-16 h-16 bg-blue-600/20 rounded-2xl flex items-center justify-center shrink-0">
+            <Monitor size={32} className="text-blue-400" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-white">Memster dla Windows</h2>
+            <p className="text-zinc-400 text-sm">Wersja 1.0.0 &bull; Windows 10 / 11 (x64)</p>
+          </div>
+        </div>
+
+        {/* Cechy */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <FeatureBadge icon={<Shield size={15} />} text="Bezpieczna instalacja" />
+          <FeatureBadge icon={<Zap size={15} />} text="Szybkie działanie" />
+          <FeatureBadge icon={<Star size={15} />} text="Pełna funkcjonalność" />
+        </div>
+
+        {/* Przycisk pobierania */}
+        <button
+          onClick={handleDownload}
+          className="w-full flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white py-4 rounded-xl font-black text-base transition-all shadow-lg shadow-blue-600/25"
+        >
+          <Download size={20} />
+          Pobierz Memster-Setup.exe
+        </button>
+
+        <p className="text-center text-zinc-600 text-xs mt-3">
+          Instalator NSIS · ok. 80 MB
+        </p>
+      </div>
+
+      {/* Instrukcja instalacji */}
+      <div className="bg-zinc-900/50 border border-zinc-800/60 rounded-2xl p-5 mb-4">
+        <h3 className="text-sm font-black uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
+          <Info size={14} />
+          Jak zainstalować?
+        </h3>
+        <ol className="space-y-2.5">
+          {[
+            'Kliknij „Pobierz Memster-Setup.exe" powyżej',
+            'Otwórz pobrany plik i postępuj zgodnie z instrukcjami instalatora',
+            'Uruchom Memster ze skrótu na pulpicie lub z menu Start',
+            'Zaloguj się na swoje konto – sesja jest zapamiętywana',
+          ].map((step, i) => (
+            <li key={i} className="flex items-start gap-3 text-sm text-zinc-300">
+              <div className="w-5 h-5 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-[10px] font-black text-blue-400">{i + 1}</span>
+              </div>
+              {step}
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {/* Wymagania systemowe */}
+      <div className="bg-zinc-900/50 border border-zinc-800/60 rounded-2xl p-5">
+        <h3 className="text-sm font-black uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
+          <CheckCircle2 size={14} />
+          Wymagania systemowe
+        </h3>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <Req label="System" value="Windows 10 / 11" />
+          <Req label="Architektura" value="64-bit (x64)" />
+          <Req label="RAM" value="min. 512 MB" />
+          <Req label="Dysk" value="ok. 250 MB" />
+          <Req label="Internet" value="Wymagany" />
+          <Req label="Aktualizacje" value="Automatyczne" />
+        </div>
+      </div>
+
+      <p className="text-center text-zinc-700 text-xs mt-6">
+        Aplikacja Memster jest bezpłatna i tworzona przez społeczność.
+      </p>
+    </div>
+  );
+};
+
+const FeatureBadge: React.FC<{ icon: React.ReactNode; text: string }> = ({ icon, text }) => (
+  <div className="flex items-center gap-2 bg-zinc-950/60 border border-zinc-800/60 p-3 rounded-xl">
+    <span className="text-blue-400 shrink-0">{icon}</span>
+    <span className="text-xs font-bold text-zinc-300 leading-tight">{text}</span>
+  </div>
+);
+
+const Req: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <div className="flex items-center justify-between bg-zinc-950/40 px-3 py-2 rounded-xl">
+    <span className="text-zinc-500 text-xs font-bold">{label}</span>
+    <span className="text-zinc-200 text-xs font-bold">{value}</span>
+  </div>
+);
+
+export default DownloadsPage;

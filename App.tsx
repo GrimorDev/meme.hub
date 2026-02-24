@@ -8,6 +8,7 @@ import RoastStation from './components/RoastStation';
 import MemeDetail from './components/MemeDetail';
 import UserProfile from './components/UserProfile';
 import AdminPanel from './components/AdminPanel';
+import DownloadsPage from './components/DownloadsPage';
 import AuthModal from './components/AuthModal';
 import UploadMemeModal from './components/UploadMemeModal';
 import SearchBar from './components/SearchBar';
@@ -47,6 +48,8 @@ const App: React.FC = () => {
       setView('ROAST');
     } else if (path === '/admin') {
       setView('ADMIN');
+    } else if (path === '/downloads') {
+      setView('DOWNLOADS');
     } else {
       const tag = params.get('tag');
       const q = params.get('q');
@@ -134,6 +137,17 @@ const App: React.FC = () => {
 
   const handleUploadSuccess = () => {
     setFeedRefreshTrigger(prev => prev + 1);
+    setView('FEED');
+    window.history.pushState({}, '', '/');
+  };
+
+  const handleNavigateToDownloads = () => {
+    setView('DOWNLOADS');
+    window.history.pushState({}, '', '/downloads');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBackFromDownloads = () => {
     setView('FEED');
     window.history.pushState({}, '', '/');
   };
@@ -418,7 +432,11 @@ const App: React.FC = () => {
             onClearFilters={() => { setActiveTag(null); setSearchQuery(''); window.history.pushState({}, '', '/'); }}
             onTagSelect={handleTagSelect}
             hideLikeCounts={user?.settings?.hideLikeCounts ?? false}
+            onNavigateToDownloads={handleNavigateToDownloads}
           />
+        )}
+        {view === 'DOWNLOADS' && (
+          <DownloadsPage onBack={handleBackFromDownloads} />
         )}
         {view === 'STUDIO' && <MemeStudio user={user} />}
         {view === 'ROAST' && <RoastStation />}

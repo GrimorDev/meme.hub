@@ -16,6 +16,7 @@ interface MemeFeedProps {
   onClearFilters?: () => void;
   onTagSelect: (tag: string) => void;
   hideLikeCounts?: boolean;
+  onNavigateToDownloads?: () => void;
 }
 
 const MemeFeed: React.FC<MemeFeedProps> = ({
@@ -28,6 +29,7 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
   onClearFilters,
   onTagSelect,
   hideLikeCounts = false,
+  onNavigateToDownloads,
 }) => {
   const [activeTab, setActiveTab] = useState<'HOT' | 'TOP' | 'NOWE'>('HOT');
   const [posts, setPosts] = useState<MemePost[]>([]);
@@ -67,6 +69,7 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
         onTabChange={setActiveTab}
         onTagSelect={onTagSelect}
         onClearFilters={onClearFilters ?? (() => {})}
+        onNavigateToDownloads={onNavigateToDownloads}
       />
       {/* Pływający hamburger — przyklejony do lewej krawędzi */}
       <button

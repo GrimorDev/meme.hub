@@ -41,10 +41,11 @@ interface CategorySideMenuProps {
   onTabChange: (tab: 'HOT' | 'TOP' | 'NOWE') => void;
   onTagSelect: (tag: string) => void;
   onClearFilters: () => void;
+  onNavigateToDownloads?: () => void;
 }
 
 const CategorySideMenu: React.FC<CategorySideMenuProps> = ({
-  isOpen, onClose, activeTag, activeTab, onTabChange, onTagSelect, onClearFilters,
+  isOpen, onClose, activeTag, activeTab, onTabChange, onTagSelect, onClearFilters, onNavigateToDownloads,
 }) => {
   const [pinned, setPinnedState] = useState<string[]>(getPinned);
   const [expanded, setExpanded] = useState<string[]>([]);
@@ -282,9 +283,14 @@ const CategorySideMenu: React.FC<CategorySideMenuProps> = ({
           <p className="px-1 pb-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">
             Aplikacja desktopowa
           </p>
-          <a
-            href="/downloads/Memster-Setup.exe"
-            className="flex items-center gap-3 px-3 py-3 rounded-xl bg-zinc-900/60 border border-zinc-800 hover:border-blue-500/40 hover:bg-blue-950/20 transition-all group cursor-pointer"
+          <button
+            onClick={() => {
+              onClose();
+              if (onNavigateToDownloads) {
+                onNavigateToDownloads();
+              }
+            }}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl bg-zinc-900/60 border border-zinc-800 hover:border-blue-500/40 hover:bg-blue-950/20 transition-all group cursor-pointer text-left"
           >
             <div className="w-9 h-9 bg-blue-600/20 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-blue-600/30 transition-colors">
               <Monitor size={18} className="text-blue-400" />
@@ -294,7 +300,7 @@ const CategorySideMenu: React.FC<CategorySideMenuProps> = ({
               <p className="text-[10px] text-zinc-500 mt-0.5">Wersja desktopowa (.exe)</p>
             </div>
             <Download size={14} className="text-zinc-600 group-hover:text-blue-400 shrink-0 transition-colors" />
-          </a>
+          </button>
         </div>
       </div>
     </>
