@@ -20,7 +20,8 @@
     },
     "files": [
       "main.js",
-      "icon.png"
+      "icon.png",
+      "splash.html"
     ],
     "win": {
       "target": [

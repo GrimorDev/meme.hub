@@ -1,6 +1,9 @@
 
 import React, { useState } from 'react';
-import { Monitor, Download, Shield, Zap, Star, ArrowLeft, CheckCircle2, Info, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Monitor, Download, Shield, Zap, Star, ArrowLeft, CheckCircle2, Info, AlertTriangle, ChevronDown, ChevronUp, PartyPopper } from 'lucide-react';
+
+// Sprawdź czy uruchomione jako Electron desktop
+const isDesktopApp = () => navigator.userAgent.includes('MemsterDesktop');
 
 interface DownloadsPageProps {
   onBack: () => void;
@@ -8,6 +11,7 @@ interface DownloadsPageProps {
 
 const DownloadsPage: React.FC<DownloadsPageProps> = ({ onBack }) => {
   const [smartscreenOpen, setSmartscreenOpen] = useState(false);
+  const desktop = isDesktopApp();
 
   const handleDownload = () => {
     const a = document.createElement('a');
@@ -29,13 +33,30 @@ const DownloadsPage: React.FC<DownloadsPageProps> = ({ onBack }) => {
         Wróć do feedu
       </button>
 
+      {/* Banner gdy uruchomione jako Electron */}
+      {desktop && (
+        <div className="bg-purple-950/30 border border-purple-700/40 rounded-2xl p-6 mb-6 flex items-center gap-4">
+          <div className="w-12 h-12 bg-purple-600/20 rounded-xl flex items-center justify-center shrink-0">
+            <PartyPopper size={24} className="text-purple-400" />
+          </div>
+          <div>
+            <p className="text-base font-black text-purple-200">Już masz aplikację desktopową!</p>
+            <p className="text-xs text-purple-500 mt-1">
+              Korzystasz właśnie z Memster Desktop. Nie musisz nic pobierać — jesteś w domu 🏠
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Nagłówek */}
       <div className="mb-8">
         <h1 className="text-3xl font-black uppercase tracking-tight text-white mb-1">
           Aplikacja desktopowa
         </h1>
         <p className="text-zinc-400">
-          Pobierz Memster na swój komputer i korzystaj z pełnej funkcjonalności.
+          {desktop
+            ? 'Informacje o aplikacji Memster Desktop.'
+            : 'Pobierz Memster na swój komputer i korzystaj z pełnej funkcjonalności.'}
         </p>
       </div>
 
@@ -59,18 +80,26 @@ const DownloadsPage: React.FC<DownloadsPageProps> = ({ onBack }) => {
           <FeatureBadge icon={<Star size={15} />} text="Pełna funkcjonalność" />
         </div>
 
-        {/* Przycisk pobierania */}
-        <button
-          onClick={handleDownload}
-          className="w-full flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white py-4 rounded-xl font-black text-base transition-all shadow-lg shadow-blue-600/25"
-        >
-          <Download size={20} />
-          Pobierz Memster-Setup.exe
-        </button>
-
-        <p className="text-center text-zinc-600 text-xs mt-3">
-          Instalator NSIS · ok. 80 MB
-        </p>
+        {/* Przycisk pobierania — ukryty gdy już na desktopie */}
+        {!desktop ? (
+          <>
+            <button
+              onClick={handleDownload}
+              className="w-full flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white py-4 rounded-xl font-black text-base transition-all shadow-lg shadow-blue-600/25"
+            >
+              <Download size={20} />
+              Pobierz Memster-Setup.exe
+            </button>
+            <p className="text-center text-zinc-600 text-xs mt-3">
+              Instalator NSIS · ok. 80 MB
+            </p>
+          </>
+        ) : (
+          <div className="w-full flex items-center justify-center gap-2 bg-zinc-800/50 text-zinc-500 py-4 rounded-xl font-bold text-sm border border-zinc-700/50">
+            <CheckCircle2 size={16} className="text-purple-500" />
+            Aplikacja już zainstalowana i uruchomiona
+          </div>
+        )}
       </div>
 
       {/* SmartScreen — ostrzeżenie i instrukcja */}
