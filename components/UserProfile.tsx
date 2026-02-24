@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Grid, Heart, MessageCircle, Calendar, Trophy, ImageOff, Edit3, Shield, Flag, Check, X } from 'lucide-react';
+import { ArrowLeft, Grid, Heart, MessageCircle, Calendar, Trophy, ImageOff, Edit3, Shield, Flag, Check, X, MessageSquare } from 'lucide-react';
 import { MemePost, User } from '../types';
 import { db } from '../services/db';
 import EditProfileModal from './EditProfileModal';
@@ -11,9 +11,10 @@ interface UserProfileProps {
   onMemeSelect: (meme: MemePost) => void;
   currentUser: User | null;
   onUserUpdate: (updatedUser: User) => void;
+  onStartDm?: (userId: string) => void;
 }
 
-const UserProfile: React.FC<UserProfileProps> = ({ username, onBack, onMemeSelect, currentUser, onUserUpdate }) => {
+const UserProfile: React.FC<UserProfileProps> = ({ username, onBack, onMemeSelect, currentUser, onUserUpdate, onStartDm }) => {
   const [profileUser, setProfileUser] = useState<User | undefined>(undefined);
   const [posts, setPosts] = useState<MemePost[]>([]);
   const [stats, setStats] = useState({ postCount: 0, totalLikes: 0 });
@@ -81,13 +82,24 @@ const UserProfile: React.FC<UserProfileProps> = ({ username, onBack, onMemeSelec
               Edytuj Profil
             </button>
           ) : currentUser && (
-            <button
-              onClick={() => setShowReportModal(true)}
-              className="flex items-center gap-2 bg-black/50 hover:bg-red-900/40 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 hover:border-red-500/30 transition-all font-bold text-xs text-zinc-400 hover:text-red-400"
-            >
-              <Flag size={14} />
-              Zgłoś profil
-            </button>
+            <div className="flex items-center gap-2">
+              {onStartDm && profileUser.id !== 'unknown' && (
+                <button
+                  onClick={() => onStartDm(profileUser.id)}
+                  className="flex items-center gap-2 bg-purple-600/80 hover:bg-purple-600 backdrop-blur-md px-4 py-2 rounded-xl border border-purple-500/40 transition-all font-bold text-xs text-white"
+                >
+                  <MessageSquare size={14} />
+                  Wyślij wiadomość
+                </button>
+              )}
+              <button
+                onClick={() => setShowReportModal(true)}
+                className="flex items-center gap-2 bg-black/50 hover:bg-red-900/40 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 hover:border-red-500/30 transition-all font-bold text-xs text-zinc-400 hover:text-red-400"
+              >
+                <Flag size={14} />
+                Zgłoś profil
+              </button>
+            </div>
           )}
         </div>
 

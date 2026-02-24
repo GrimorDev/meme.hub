@@ -1,5 +1,5 @@
 
-export type AppView = 'FEED' | 'STUDIO' | 'ROAST' | 'DETAIL' | 'PROFILE' | 'ADMIN' | 'DOWNLOADS';
+export type AppView = 'FEED' | 'STUDIO' | 'ROAST' | 'DETAIL' | 'PROFILE' | 'ADMIN' | 'DOWNLOADS' | 'MESSAGES';
 
 export type SliderMode = 'SIMPLE' | 'RUNNER' | 'GRAVITY' | 'MATH' | 'VOICE' | 'DICE' | 'SHAKE';
 
@@ -227,6 +227,38 @@ export interface PaginatedPosts {
   total: number;
   page: number;
   totalPages: number;
+}
+
+export interface AppNotification {
+  id: string;
+  type: 'comment' | 'reply' | 'featured' | 'message';
+  title: string;
+  body: string;
+  link?: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface DirectMessage {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  senderUsername: string;
+  senderAvatarColor: string;
+  senderAvatarUrl?: string;
+  text: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface Conversation {
+  userId: string;
+  username: string;
+  avatarColor: string;
+  avatarUrl?: string;
+  lastMessage: string;
+  lastMessageAt: string;
+  unreadCount: number;
 }
 
 export interface MemeTextBox {

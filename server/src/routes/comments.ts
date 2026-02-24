@@ -76,6 +76,46 @@ router.post('/posts/:id/comments', requireAuth, async (req, res) => {
       },
     });
 
+    // ── Powiadomienia (fire-and-forget, nie blokują odpowiedzi) ──
+    const myId = req.session.userId!;
+    const myName = req.session.username!;
+    const postId = req.params.id;
+
+    // Powiadom autora posta (jeśli nie komentuje własnego)
+    prisma.memePost.findUnique({ where: { id: postId }, select: { authorId: true } })
+      .then(async (post) => {
+        if (!post || post.authorId === myId) return;
+        await prisma.notification.create({
+          data: {
+            userId: post.authorId,
+            type:   'comment',
+            title:  'Nowy komentarz',
+            body:   `${myName} skomentował Twój mem`,
+            link:   `/meme/${postId}`,
+          },
+        });
+
+        // Powiadom autora rodzica (reply) — jeśli różny od post.authorId
+        if (parentId) {
+          const parent = await prisma.comment.findUnique({
+            where: { id: parentId },
+            select: { authorId: true },
+          });
+          if (parent && parent.authorId !== myId && parent.authorId !== post.authorId) {
+            await prisma.notification.create({
+              data: {
+                userId: parent.authorId,
+                type:   'reply',
+                title:  'Odpowiedź na komentarz',
+                body:   `${myName} odpowiedział na Twój komentarz`,
+                link:   `/meme/${postId}`,
+              },
+            });
+          }
+        }
+      })
+      .catch((err) => console.error('Notification error:', err));
+
     res.status(201).json({
       id: comment.id,
       postId: comment.postId,

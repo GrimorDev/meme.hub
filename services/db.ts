@@ -1,4 +1,4 @@
-import { MemePost, User, Comment, AdminUser, AdminReport, AdminUserReport, CommunityTemplate, PaginatedPosts } from '../types';
+import { MemePost, User, Comment, AdminUser, AdminReport, AdminUserReport, CommunityTemplate, PaginatedPosts, AppNotification, DirectMessage, Conversation } from '../types';
 
 const API_BASE =
   (import.meta as any).env?.VITE_API_URL !== undefined &&
@@ -267,6 +267,56 @@ class ApiClient {
   }
   async toggleTemplatePublic(id: string): Promise<{ isPublic: boolean }> {
     return request(`/templates/${id}/publish`, { method: 'PATCH' });
+  }
+
+  // ── Powiadomienia ─────────────────────────────────────────────
+  async getNotifications(): Promise<AppNotification[]> {
+    try { return await request<AppNotification[]>('/notifications'); }
+    catch { return []; }
+  }
+
+  async getNotificationUnreadCount(): Promise<number> {
+    try {
+      const { count } = await request<{ count: number }>('/notifications/unread-count');
+      return count;
+    } catch { return 0; }
+  }
+
+  async markAllNotificationsRead(): Promise<void> {
+    try { await request('/notifications/read-all', { method: 'PUT' }); } catch {}
+  }
+
+  async markNotificationRead(id: string): Promise<void> {
+    try { await request(`/notifications/${id}/read`, { method: 'PUT' }); } catch {}
+  }
+
+  // ── Wiadomości prywatne ───────────────────────────────────────
+  async getConversations(): Promise<Conversation[]> {
+    try { return await request<Conversation[]>('/messages/conversations'); }
+    catch { return []; }
+  }
+
+  async getMessageUnreadCount(): Promise<number> {
+    try {
+      const { count } = await request<{ count: number }>('/messages/unread-count');
+      return count;
+    } catch { return 0; }
+  }
+
+  async getMessages(userId: string): Promise<DirectMessage[]> {
+    try { return await request<DirectMessage[]>(`/messages/${userId}`); }
+    catch { return []; }
+  }
+
+  async sendMessage(userId: string, text: string): Promise<DirectMessage> {
+    return request<DirectMessage>(`/messages/${userId}`, {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
+  }
+
+  async markMessagesRead(userId: string): Promise<void> {
+    try { await request(`/messages/${userId}/read`, { method: 'PUT' }); } catch {}
   }
 
   async uploadFile(file: File): Promise<string> {

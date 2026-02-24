@@ -214,6 +214,20 @@ router.post('/posts/:id/feature', requireAdmin, async (req, res) => {
       where: { id: req.params.id },
       data: { featured: !post.featured },
     });
+
+    // Powiadom autora gdy mem trafia na główny feed (false → true)
+    if (!post.featured) {
+      prisma.notification.create({
+        data: {
+          userId: post.authorId,
+          type:   'featured',
+          title:  'Twój mem na głównym feedzie! 🎉',
+          body:   'Twój mem trafił na główny feed! Gratulacje',
+          link:   `/meme/${post.id}`,
+        },
+      }).catch((err) => console.error('Featured notification error:', err));
+    }
+
     res.json({ featured: updated.featured });
   } catch (err) {
     console.error(err);

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { LayoutGrid, PenTool, Flame, User as UserIcon, Settings, LogOut, LogIn, Plus, X, Shield, Palette, Eye, Bell as BellIcon, ChevronRight } from 'lucide-react';
+import { LayoutGrid, PenTool, Flame, User as UserIcon, Settings, LogOut, LogIn, Plus, X, Shield, Palette, Eye, Bell, MessageSquare, ChevronRight } from 'lucide-react';
 import { AppView, MemePost, User, UserSettings } from './types';
 import MemeFeed from './components/MemeFeed';
 import MemeStudio from './components/MemeStudio';
@@ -9,6 +9,8 @@ import MemeDetail from './components/MemeDetail';
 import UserProfile from './components/UserProfile';
 import AdminPanel from './components/AdminPanel';
 import DownloadsPage from './components/DownloadsPage';
+import NotificationsPanel from './components/NotificationsPanel';
+import MessagesView from './components/MessagesView';
 import AuthModal from './components/AuthModal';
 import UploadMemeModal from './components/UploadMemeModal';
 import SearchBar from './components/SearchBar';
@@ -19,6 +21,11 @@ const App: React.FC = () => {
   const [selectedMeme, setSelectedMeme] = useState<MemePost | null>(null);
   const [selectedProfileUsername, setSelectedProfileUsername] = useState<string | null>(null);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
+  const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [selectedMessageUserId, setSelectedMessageUserId] = useState<string | null>(null);
+  const prevUnreadNotifRef = useRef(0);
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [user, setUser] = useState<User | null>(null);
@@ -50,6 +57,10 @@ const App: React.FC = () => {
       setView('ADMIN');
     } else if (path === '/downloads') {
       setView('DOWNLOADS');
+    } else if (path === '/messages' || path.startsWith('/messages/')) {
+      const uid = path.startsWith('/messages/') ? path.slice(10) : null;
+      setSelectedMessageUserId(uid);
+      setView('MESSAGES');
     } else {
       const tag = params.get('tag');
       const q = params.get('q');
@@ -72,9 +83,42 @@ const App: React.FC = () => {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
+  // ── Polling powiadomień co 15 s ──────────────────────────────
+  useEffect(() => {
+    if (!user) { setUnreadNotifications(0); setUnreadMessages(0); return; }
+    const poll = async () => {
+      const [nc, mc] = await Promise.all([
+        db.getNotificationUnreadCount(),
+        db.getMessageUnreadCount(),
+      ]);
+      if (nc > prevUnreadNotifRef.current) {
+        if ('Notification' in window && (window.Notification as typeof Notification).permission === 'granted') {
+          const notifs = await db.getNotifications();
+          const newest = notifs.find(n => !n.read);
+          if (newest) {
+            new (window.Notification as typeof Notification)('Memster — ' + newest.title, {
+              body: newest.body,
+              icon: '/memster.png',
+            });
+          }
+        }
+      }
+      prevUnreadNotifRef.current = nc;
+      setUnreadNotifications(nc);
+      setUnreadMessages(mc);
+    };
+    poll();
+    const id = setInterval(poll, 15000);
+    return () => clearInterval(id);
+  }, [user]);
+
   const handleLogin = (userData: User) => {
     setUser(userData);
     setIsAuthModalOpen(false);
+    // Poproś o uprawnienia do powiadomień po zalogowaniu
+    if ('Notification' in window && (window.Notification as typeof Notification).permission === 'default') {
+      (window.Notification as typeof Notification).requestPermission();
+    }
   };
 
   const handleUserUpdate = (updatedUser: User) => {
@@ -150,6 +194,13 @@ const App: React.FC = () => {
   const handleBackFromDownloads = () => {
     setView('FEED');
     window.history.pushState({}, '', '/');
+  };
+
+  const handleNavigateToMessages = (userId?: string) => {
+    setSelectedMessageUserId(userId ?? null);
+    setView('MESSAGES');
+    window.history.pushState({}, '', userId ? `/messages/${userId}` : '/messages');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const updateSetting = <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
@@ -228,8 +279,36 @@ const App: React.FC = () => {
             )}
 
             {user && (
-              <button 
-                onClick={() => setShowSettingsPanel(!showSettingsPanel)}
+              <button
+                onClick={() => { setShowNotificationsPanel(p => !p); setShowSettingsPanel(false); }}
+                className={`relative p-2 transition-all rounded-xl border ${showNotificationsPanel ? 'bg-purple-500/10 border-purple-500/50 text-purple-400' : 'text-zinc-400 hover:text-white border-transparent'}`}
+              >
+                <Bell size={22} />
+                {unreadNotifications > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {user && (
+              <button
+                onClick={() => { handleNavigateToMessages(); setShowNotificationsPanel(false); setShowSettingsPanel(false); }}
+                className={`relative p-2 transition-all rounded-xl border ${view === 'MESSAGES' ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' : 'text-zinc-400 hover:text-white border-transparent'}`}
+              >
+                <MessageSquare size={22} />
+                {unreadMessages > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-blue-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                    {unreadMessages > 9 ? '9+' : unreadMessages}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {user && (
+              <button
+                onClick={() => { setShowSettingsPanel(!showSettingsPanel); setShowNotificationsPanel(false); }}
                 className={`p-2 transition-all rounded-xl border ${showSettingsPanel ? `bg-${accentClass}-500/10 border-${accentClass}-500/50 text-${accentClass}-500` : 'text-zinc-400 hover:text-white border-transparent'}`}
               >
                 <Settings size={22} />
@@ -370,6 +449,21 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* Panel powiadomień */}
+      {showNotificationsPanel && user && (
+        <NotificationsPanel
+          onClose={() => setShowNotificationsPanel(false)}
+          onNavigate={(link) => {
+            setShowNotificationsPanel(false);
+            // Przetwórz link jak URL routing
+            const url = new URL(link, window.location.origin);
+            applyURL(url.pathname, url.search);
+            window.history.pushState({}, '', link);
+          }}
+          onUnreadChange={setUnreadNotifications}
+        />
+      )}
+
       {/* Mobilny dolny pasek nawigacji */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-[#0a0a0c]/95 backdrop-blur-xl border-t border-zinc-800 safe-area-inset-bottom">
         <div className="flex items-center justify-around h-16 px-2">
@@ -409,6 +503,23 @@ const App: React.FC = () => {
               danger
             />
           )}
+          {user && (
+            <MobileNavBtn
+              active={view === 'MESSAGES'}
+              onClick={() => handleNavigateToMessages()}
+              icon={
+                <div className="relative">
+                  <MessageSquare size={22} />
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-1 -right-2 min-w-[14px] h-[14px] px-0.5 bg-blue-500 text-white text-[8px] font-black rounded-full flex items-center justify-center">
+                      {unreadMessages > 9 ? '9+' : unreadMessages}
+                    </span>
+                  )}
+                </div>
+              }
+              label="DM"
+            />
+          )}
           {!user && (
             <MobileNavBtn
               active={false}
@@ -438,6 +549,14 @@ const App: React.FC = () => {
         {view === 'DOWNLOADS' && (
           <DownloadsPage onBack={handleBackFromDownloads} />
         )}
+        {view === 'MESSAGES' && user && (
+          <MessagesView
+            currentUser={user}
+            initialUserId={selectedMessageUserId}
+            onUserClick={handleUserSelect}
+            onMessageCountChange={setUnreadMessages}
+          />
+        )}
         {view === 'STUDIO' && <MemeStudio user={user} />}
         {view === 'ROAST' && <RoastStation />}
         {view === 'DETAIL' && selectedMeme && (
@@ -457,6 +576,7 @@ const App: React.FC = () => {
             onMemeSelect={handleMemeSelect}
             currentUser={user}
             onUserUpdate={handleUserUpdate}
+            onStartDm={(userId) => handleNavigateToMessages(userId)}
           />
         )}
         {view === 'ADMIN' && user?.role === 'admin' && (
