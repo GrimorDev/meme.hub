@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { LayoutGrid, PenTool, Flame, Zap, User as UserIcon, Settings, LogOut, LogIn, Plus, X, Shield, Palette, Eye, Bell as BellIcon, ChevronRight } from 'lucide-react';
+import { LayoutGrid, PenTool, Flame, User as UserIcon, Settings, LogOut, LogIn, Plus, X, Shield, Palette, Eye, Bell as BellIcon, ChevronRight } from 'lucide-react';
 import { AppView, MemePost, User, UserSettings } from './types';
 import MemeFeed from './components/MemeFeed';
 import MemeStudio from './components/MemeStudio';
@@ -123,8 +123,8 @@ const App: React.FC = () => {
               className="flex items-center gap-2 cursor-pointer group"
               onClick={() => { setView('FEED'); setSelectedMeme(null); setActiveTag(null); setSearchQuery(''); }}
             >
-              <div className={`w-10 h-10 bg-gradient-to-tr from-${accentClass}-600 to-pink-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(147,51,234,0.3)] group-hover:scale-110 transition-transform`}>
-                <Zap className="text-white fill-white" size={20} />
+              <div className="w-10 h-10 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(147,51,234,0.3)] group-hover:scale-110 transition-transform shrink-0">
+                <img src="/memster.png" alt="Memster" className="w-full h-full object-cover" />
               </div>
               <span className="text-xl font-black tracking-tighter uppercase italic hidden lg:block">MEMSTER</span>
             </div>

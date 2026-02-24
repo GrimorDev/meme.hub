@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Download,
-  Sparkles,
   Type as TypeIcon,
   Search,
   Loader2,
@@ -22,7 +21,6 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { GoogleGenAI, Type as GenAIType } from "@google/genai";
 import { MemeTextBox, User, CommunityTemplate } from '../types';
 import { db } from '../services/db';
 
@@ -72,7 +70,6 @@ const MemeStudio: React.FC<Props> = ({ user }) => {
   const [selectedTemplate, setSelectedTemplate] = useState<ImgflipMeme | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDraftSaved, setIsDraftSaved] = useState(false);
   const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
@@ -443,32 +440,6 @@ const MemeStudio: React.FC<Props> = ({ user }) => {
     } finally { setIsDownloading(false); }
   };
 
-  const generateAICaptions = async () => {
-    if (!selectedTemplate) return;
-    setIsGenerating(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `Śmieszne napisy do mema "${selectedTemplate.name}". Góra i dół. Po polsku.`;
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-        config: { 
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: GenAIType.OBJECT,
-            properties: { top: { type: GenAIType.STRING }, bottom: { type: GenAIType.STRING } },
-            required: ["top", "bottom"],
-          },
-        },
-      });
-      const data = JSON.parse(response.text || '{}');
-      const newBoxes = [...textBoxes];
-      if (newBoxes[0]) newBoxes[0].text = (data.top || '').toUpperCase();
-      if (newBoxes[1]) newBoxes[1].text = (data.bottom || '').toUpperCase();
-      setTextBoxes(newBoxes);
-    } catch (err) { console.error(err); } finally { setIsGenerating(false); }
-  };
-
   const currentBox = textBoxes.find(b => b.id === selectedBoxId);
 
   return (
@@ -479,7 +450,7 @@ const MemeStudio: React.FC<Props> = ({ user }) => {
       <div className="lg:col-span-3 space-y-3 bg-zinc-900/40 p-4 rounded-[2rem] border border-zinc-800 h-[800px] flex flex-col shadow-2xl">
         {/* Zakładki */}
         <div className="flex bg-zinc-950/60 p-1 rounded-2xl gap-1">
-          {([['imgflip', '🌐', 'Imgflip'], ['community', '👥', 'Community'], ['mine', '🗂️', 'Moje']] as const).map(([tab, emoji, label]) => (
+          {([['imgflip', '🖼️', 'Template'], ['community', '👥', 'Community'], ['mine', '🗂️', 'Moje']] as const).map(([tab, emoji, label]) => (
             <button
               key={tab}
               onClick={() => setSidebarTab(tab)}
@@ -746,25 +717,20 @@ const MemeStudio: React.FC<Props> = ({ user }) => {
         </div>
         
         {/* Przycisk Akcji */}
-        <div className="flex gap-4 w-full max-w-[600px]">
-          <button onClick={generateAICaptions} disabled={isGenerating || !selectedTemplate} className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black py-4 rounded-3xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl">
-            <Sparkles size={24} className={isGenerating ? 'animate-spin' : ''} />
-            {isGenerating ? 'MIESZAM...' : 'AI MAGICZNE NAPISY'}
+        <div className="flex gap-3 w-full max-w-[600px] justify-end">
+          <button
+              onClick={handleSaveDraft}
+              disabled={!selectedTemplate}
+              className={`px-5 py-4 bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white rounded-2xl flex items-center gap-2 font-bold transition-all active:scale-95 ${isDraftSaved ? 'text-green-500 border-green-500/50' : ''}`}
+              title="Zapisz szkic"
+          >
+              {isDraftSaved ? <Check size={20} /> : <Save size={20} />}
+              {isDraftSaved ? 'Zapisano' : 'Szkic'}
           </button>
-          <div className="flex gap-2">
-            <button 
-                onClick={handleSaveDraft}
-                disabled={!selectedTemplate}
-                className={`px-4 bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white rounded-2xl flex items-center gap-2 font-bold transition-all active:scale-95 ${isDraftSaved ? 'text-green-500 border-green-500/50' : ''}`}
-                title="Zapisz szkic"
-            >
-                {isDraftSaved ? <Check size={20} /> : <Save size={20} />}
-            </button>
-            <button onClick={downloadMeme} disabled={isDownloading || !selectedTemplate} className="px-10 bg-zinc-900 border border-zinc-800 text-white rounded-2xl flex items-center gap-3 font-bold active:scale-95 transition-all">
-                {isDownloading ? <Loader2 className="animate-spin" /> : <Download />}
-                {isDownloading ? 'RENDER...' : 'ZAPISZ'}
-            </button>
-          </div>
+          <button onClick={downloadMeme} disabled={isDownloading || !selectedTemplate} className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black py-4 rounded-3xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl">
+              {isDownloading ? <Loader2 className="animate-spin" size={24} /> : <Download size={24} />}
+              {isDownloading ? 'RENDER...' : 'POBIERZ MEM'}
+          </button>
         </div>
       </div>
 
@@ -814,28 +780,27 @@ const MemeStudio: React.FC<Props> = ({ user }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex justify-between items-end"><label className="text-[10px] font-black uppercase text-zinc-500">Rozmiar</label></div>
-                <div className="flex gap-2 items-center">
-                    <input type="range" min="1" max="25" step="0.1" value={currentBox.fontSize} onChange={(e) => updateBox(currentBox.id, { fontSize: parseFloat(e.target.value) })} className="flex-1 h-1 bg-zinc-800 rounded-full appearance-none accent-purple-500" />
-                    <input type="number" min="1" max="25" step="0.1" value={currentBox.fontSize} onChange={(e) => updateBox(currentBox.id, { fontSize: parseFloat(e.target.value) })} className="w-12 bg-zinc-950 border border-zinc-800 rounded-lg text-xs font-mono text-center py-1 focus:border-purple-500 outline-none text-zinc-300" />
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-zinc-500">Rozmiar</label>
+                <div className="flex gap-2 items-center min-w-0">
+                    <input type="range" min="1" max="25" step="0.1" value={currentBox.fontSize} onChange={(e) => updateBox(currentBox.id, { fontSize: parseFloat(e.target.value) })} className="flex-1 min-w-0 h-1 bg-zinc-800 rounded-full appearance-none accent-purple-500" />
+                    <input type="number" min="1" max="25" step="0.1" value={currentBox.fontSize} onChange={(e) => updateBox(currentBox.id, { fontSize: parseFloat(e.target.value) })} className="w-14 shrink-0 bg-zinc-950 border border-zinc-800 rounded-lg text-xs font-mono text-center py-1 focus:border-purple-500 outline-none text-zinc-300" />
                 </div>
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-end"><label className="text-[10px] font-black uppercase text-zinc-500">Szerokość %</label></div>
-                <div className="flex gap-2 items-center">
-                    <input type="range" min="10" max="100" value={currentBox.width} onChange={(e) => updateBox(currentBox.id, { width: parseInt(e.target.value) })} className="flex-1 h-1 bg-zinc-800 rounded-full appearance-none accent-purple-500" />
-                    <input type="number" min="10" max="100" value={currentBox.width} onChange={(e) => updateBox(currentBox.id, { width: parseInt(e.target.value) })} className="w-12 bg-zinc-950 border border-zinc-800 rounded-lg text-xs font-mono text-center py-1 focus:border-purple-500 outline-none text-zinc-300" />
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-zinc-500">Szerokość %</label>
+                <div className="flex gap-2 items-center min-w-0">
+                    <input type="range" min="10" max="100" value={currentBox.width} onChange={(e) => updateBox(currentBox.id, { width: parseInt(e.target.value) })} className="flex-1 min-w-0 h-1 bg-zinc-800 rounded-full appearance-none accent-purple-500" />
+                    <input type="number" min="10" max="100" value={currentBox.width} onChange={(e) => updateBox(currentBox.id, { width: parseInt(e.target.value) })} className="w-14 shrink-0 bg-zinc-950 border border-zinc-800 rounded-lg text-xs font-mono text-center py-1 focus:border-purple-500 outline-none text-zinc-300" />
                 </div>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between items-end"><label className="text-[10px] font-black uppercase text-zinc-500">Obrys</label></div>
-              <div className="flex gap-2 items-center">
-                  <input type="range" min="0" max="5" step="0.1" value={currentBox.outlineWidth} onChange={(e) => updateBox(currentBox.id, { outlineWidth: parseFloat(e.target.value) })} className="flex-1 h-1 bg-zinc-800 rounded-full appearance-none accent-purple-500" />
-                  <input type="number" min="0" max="5" step="0.1" value={currentBox.outlineWidth} onChange={(e) => updateBox(currentBox.id, { outlineWidth: parseFloat(e.target.value) })} className="w-12 bg-zinc-950 border border-zinc-800 rounded-lg text-xs font-mono text-center py-1 focus:border-purple-500 outline-none text-zinc-300" />
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-zinc-500">Obrys</label>
+                <div className="flex gap-2 items-center min-w-0">
+                    <input type="range" min="0" max="5" step="0.1" value={currentBox.outlineWidth} onChange={(e) => updateBox(currentBox.id, { outlineWidth: parseFloat(e.target.value) })} className="flex-1 min-w-0 h-1 bg-zinc-800 rounded-full appearance-none accent-purple-500" />
+                    <input type="number" min="0" max="5" step="0.1" value={currentBox.outlineWidth} onChange={(e) => updateBox(currentBox.id, { outlineWidth: parseFloat(e.target.value) })} className="w-14 shrink-0 bg-zinc-950 border border-zinc-800 rounded-lg text-xs font-mono text-center py-1 focus:border-purple-500 outline-none text-zinc-300" />
+                </div>
               </div>
             </div>
 
