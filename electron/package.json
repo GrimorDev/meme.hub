@@ -39,15 +39,21 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Memster"
+      "shortcutName": "Memster",
+      "artifactName": "Memster-Setup.exe"
+    },
+    "portable": {
+      "artifactName": "Memster-Portable.exe"
     },
     "mac": {
       "target": "dmg",
-      "category": "public.app-category.social-networking"
+      "category": "public.app-category.social-networking",
+      "artifactName": "Memster-Mac.dmg"
     },
     "linux": {
       "target": "AppImage",
-      "category": "Network"
+      "category": "Network",
+      "artifactName": "Memster-Linux.AppImage"
     }
   },
   "devDependencies": {

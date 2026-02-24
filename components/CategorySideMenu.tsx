@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   X, ChevronDown, ChevronRight, Pin, PinOff,
-  Flame, Star, Sparkles,
+  Flame, Star, Sparkles, Monitor, Download,
   Laugh, Film, Gamepad2, Landmark, Trophy, Zap, PawPrint, Cpu, BookOpen, Briefcase, Heart, Shuffle,
 } from 'lucide-react';
 import { MEME_CATEGORIES } from '../types';
@@ -275,6 +275,26 @@ const CategorySideMenu: React.FC<CategorySideMenuProps> = ({
               </div>
             );
           })}
+        </div>
+
+        {/* ── POBIERZ APLIKACJĘ ── */}
+        <div className="shrink-0 px-3 py-3 border-t border-zinc-800/80">
+          <p className="px-1 pb-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">
+            Aplikacja desktopowa
+          </p>
+          <a
+            href="/downloads/Memster-Setup.exe"
+            className="flex items-center gap-3 px-3 py-3 rounded-xl bg-zinc-900/60 border border-zinc-800 hover:border-blue-500/40 hover:bg-blue-950/20 transition-all group cursor-pointer"
+          >
+            <div className="w-9 h-9 bg-blue-600/20 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-blue-600/30 transition-colors">
+              <Monitor size={18} className="text-blue-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-white group-hover:text-blue-200 transition-colors leading-tight">Pobierz na Windows</p>
+              <p className="text-[10px] text-zinc-500 mt-0.5">Wersja desktopowa (.exe)</p>
+            </div>
+            <Download size={14} className="text-zinc-600 group-hover:text-blue-400 shrink-0 transition-colors" />
+          </a>
         </div>
       </div>
     </>

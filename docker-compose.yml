@@ -46,10 +46,13 @@ services:
     networks:
       - default
       - proxy
+    volumes:
+      - downloads_data:/downloads
 
 volumes:
   postgres_data:
   uploads_data:
+  downloads_data:
 
 networks:
   proxy:
