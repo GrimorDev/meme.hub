@@ -1,12 +1,14 @@
 
-import React from 'react';
-import { Monitor, Download, Shield, Zap, Star, ArrowLeft, CheckCircle2, Info } from 'lucide-react';
+import React, { useState } from 'react';
+import { Monitor, Download, Shield, Zap, Star, ArrowLeft, CheckCircle2, Info, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface DownloadsPageProps {
   onBack: () => void;
 }
 
 const DownloadsPage: React.FC<DownloadsPageProps> = ({ onBack }) => {
+  const [smartscreenOpen, setSmartscreenOpen] = useState(false);
+
   const handleDownload = () => {
     const a = document.createElement('a');
     a.href = '/downloads/Memster-Setup.exe';
@@ -71,6 +73,64 @@ const DownloadsPage: React.FC<DownloadsPageProps> = ({ onBack }) => {
         </p>
       </div>
 
+      {/* SmartScreen — ostrzeżenie i instrukcja */}
+      <div className="bg-amber-950/20 border border-amber-700/40 rounded-2xl mb-4 overflow-hidden">
+        <button
+          onClick={() => setSmartscreenOpen(p => !p)}
+          className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left hover:bg-amber-950/20 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <AlertTriangle size={16} className="text-amber-400 shrink-0" />
+            <div>
+              <p className="text-sm font-black text-amber-300">Windows może wyświetlić ostrzeżenie SmartScreen</p>
+              <p className="text-xs text-amber-700 mt-0.5">Dowiedz się, jak bezpiecznie uruchomić aplikację</p>
+            </div>
+          </div>
+          {smartscreenOpen
+            ? <ChevronUp size={16} className="text-amber-600 shrink-0" />
+            : <ChevronDown size={16} className="text-amber-600 shrink-0" />}
+        </button>
+
+        {smartscreenOpen && (
+          <div className="px-5 pb-5 border-t border-amber-700/30">
+            <p className="text-xs text-amber-200/70 mt-4 mb-4 leading-relaxed">
+              Aplikacja <strong className="text-amber-200">Memster</strong> nie posiada płatnego certyfikatu podpisu kodu (kosztuje kilkaset dolarów rocznie),
+              przez co Windows SmartScreen może wyświetlić komunikat „Nieznany wydawca" lub
+              „Ta aplikacja może zaszkodzić urządzeniu". To <strong className="text-amber-200">normalne zachowanie</strong> dla
+              darmowych aplikacji open-source. Poniżej instrukcja jak uruchomić mimo to:
+            </p>
+
+            <div className="space-y-3">
+              <SmartscreenStep
+                num={1}
+                title='Kliknij „Więcej informacji"'
+                desc='W dolnej części okna SmartScreen znajdziesz link „Więcej informacji" (More info). Kliknij go.'
+                color="amber"
+              />
+              <SmartscreenStep
+                num={2}
+                title='Kliknij „Uruchom mimo to"'
+                desc='Po rozwinięciu pojawi się przycisk „Uruchom mimo to" (Run anyway). Kliknij go, aby kontynuować instalację.'
+                color="amber"
+              />
+              <SmartscreenStep
+                num={3}
+                title="Potwierdź w UAC (jeśli wymagane)"
+                desc='Jeśli pojawi się okno Kontroli konta użytkownika (UAC), kliknij „Tak", aby zezwolić na instalację.'
+                color="amber"
+              />
+            </div>
+
+            <div className="mt-4 bg-amber-950/30 border border-amber-800/40 rounded-xl p-3">
+              <p className="text-[11px] text-amber-600 leading-relaxed">
+                <strong className="text-amber-500">Alternatywa:</strong> Możesz też korzystać z Memster bezpośrednio
+                w przeglądarce pod adresem <strong className="text-amber-400">memster.pl</strong> — bez żadnej instalacji.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Instrukcja instalacji */}
       <div className="bg-zinc-900/50 border border-zinc-800/60 rounded-2xl p-5 mb-4">
         <h3 className="text-sm font-black uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
@@ -80,7 +140,8 @@ const DownloadsPage: React.FC<DownloadsPageProps> = ({ onBack }) => {
         <ol className="space-y-2.5">
           {[
             'Kliknij „Pobierz Memster-Setup.exe" powyżej',
-            'Otwórz pobrany plik i postępuj zgodnie z instrukcjami instalatora',
+            'Jeśli pojawi się SmartScreen — kliknij „Więcej informacji" → „Uruchom mimo to"',
+            'Postępuj zgodnie z instrukcjami instalatora',
             'Uruchom Memster ze skrótu na pulpicie lub z menu Start',
             'Zaloguj się na swoje konto – sesja jest zapamiętywana',
           ].map((step, i) => (
@@ -128,6 +189,18 @@ const Req: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <div className="flex items-center justify-between bg-zinc-950/40 px-3 py-2 rounded-xl">
     <span className="text-zinc-500 text-xs font-bold">{label}</span>
     <span className="text-zinc-200 text-xs font-bold">{value}</span>
+  </div>
+);
+
+const SmartscreenStep: React.FC<{ num: number; title: string; desc: string; color: string }> = ({ num, title, desc }) => (
+  <div className="flex items-start gap-3">
+    <div className="w-6 h-6 rounded-full bg-amber-700/30 border border-amber-600/40 flex items-center justify-center shrink-0 mt-0.5">
+      <span className="text-[10px] font-black text-amber-400">{num}</span>
+    </div>
+    <div>
+      <p className="text-xs font-black text-amber-300">{title}</p>
+      <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">{desc}</p>
+    </div>
   </div>
 );
 
