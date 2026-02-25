@@ -89,7 +89,7 @@ export async function sendVerificationEmail(email: string, code: string): Promis
   await transporter.sendMail({
     from: `"${BRAND}" <${FROM}>`,
     to: email,
-    subject: `${code} — Twój kod weryfikacyjny Memster`,
+    subject: `Twój kod weryfikacyjny — Memster`,
     html: emailLayout('Weryfikacja konta Memster', body),
   });
 }
@@ -116,7 +116,7 @@ export async function sendResetEmail(email: string, code: string): Promise<void>
   await transporter.sendMail({
     from: `"${BRAND}" <${FROM}>`,
     to: email,
-    subject: `${code} — Reset hasła Memster`,
+    subject: `Reset hasła — Memster`,
     html: emailLayout('Reset hasła Memster', body),
   });
 }

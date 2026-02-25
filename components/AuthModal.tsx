@@ -28,14 +28,6 @@ const pwChecks = [
   { label: 'Znak specjalny (!@#)', test: (p: string) => /[^A-Za-z0-9]/.test(p) },
 ];
 
-// ── Auto-format kodu XXX-XX-XXX ───────────────────────────────
-function formatCode(raw: string): string {
-  const s = raw.replace(/[^A-Za-z0-9]/g, '').slice(0, 8);
-  if (s.length <= 3) return s;
-  if (s.length <= 5) return `${s.slice(0, 3)}-${s.slice(3)}`;
-  return `${s.slice(0, 3)}-${s.slice(3, 5)}-${s.slice(5)}`;
-}
-
 // ── Cooldown hook ─────────────────────────────────────────────
 function useCooldown(seconds: number) {
   const [cooldown, setCooldown] = useState(0);
@@ -73,6 +65,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }) => {
 
   const verifyCooldown  = useCooldown(60);
   const resetCooldown   = useCooldown(60);
+
+  // Reset do ekranu logowania przy każdym zamknięciu modalu
+  useEffect(() => {
+    if (!isOpen) resetAll();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -224,11 +221,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }) => {
       <input
         type="text"
         required
-        placeholder="XXX-XX-XXX"
+        placeholder="np. AbC-dE-fGh"
         value={value}
-        onChange={e => onChange(formatCode(e.target.value))}
-        className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl pl-12 pr-4 py-4 text-sm focus:border-purple-500 outline-none transition-all font-mono font-bold tracking-[0.2em] text-center text-base"
+        onChange={e => onChange(e.target.value)}
+        className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl pl-12 pr-4 py-4 text-sm focus:border-purple-500 outline-none transition-all font-mono font-bold tracking-[0.15em] text-center text-base"
         maxLength={10}
+        autoComplete="one-time-code"
+        spellCheck={false}
       />
     </div>
   );

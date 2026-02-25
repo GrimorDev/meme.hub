@@ -5,6 +5,9 @@ import { requireAuth } from '../middleware/auth.js';
 import { formatUser } from '../utils.js';
 import { generateCode, sendVerificationEmail, sendResetEmail } from '../email.js';
 
+// Normalizacja kodu: usuń myślniki i białe znaki (user może wpisać z myślnikami lub bez)
+const norm = (s: string) => s.replace(/[-\s]/g, '').trim();
+
 const router = Router();
 
 const AVATAR_COLORS = [
@@ -107,7 +110,7 @@ router.post('/verify-email', async (req, res) => {
       res.status(400).json({ error: 'Kod wygasł. Wyślij nowy kod.' });
       return;
     }
-    if (user.verificationCode !== code.trim()) {
+    if (norm(user.verificationCode) !== norm(code)) {
       res.status(400).json({ error: 'Nieprawidłowy kod weryfikacyjny' });
       return;
     }
@@ -236,7 +239,7 @@ router.post('/verify-reset-code', async (req, res) => {
       res.status(400).json({ error: 'Kod wygasł. Wyślij nowy.' });
       return;
     }
-    if (user.resetCode !== code.trim()) {
+    if (norm(user.resetCode) !== norm(code)) {
       res.status(400).json({ error: 'Nieprawidłowy kod' });
       return;
     }
@@ -277,7 +280,7 @@ router.post('/reset-password', async (req, res) => {
       res.status(400).json({ error: 'Kod wygasł. Wyślij nowy.' });
       return;
     }
-    if (user.resetCode !== code.trim()) {
+    if (norm(user.resetCode) !== norm(code)) {
       res.status(400).json({ error: 'Nieprawidłowy kod' });
       return;
     }
