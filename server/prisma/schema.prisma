@@ -20,7 +20,12 @@ model User {
   bannerUrl   String?
   description String?
   settings    Json     @default("{\"defaultSort\":\"HOT\",\"accentColor\":\"purple\",\"hideLikeCounts\":false,\"showJoinDate\":true,\"enableNotifications\":true}")
-  createdAt   DateTime @default(now())
+  emailVerified          Boolean   @default(false)
+  verificationCode       String?
+  verificationCodeExpiry DateTime?
+  resetCode              String?
+  resetCodeExpiry        DateTime?
+  createdAt              DateTime  @default(now())
 
   posts              MemePost[]
   postLikes          PostLike[]

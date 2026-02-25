@@ -6,6 +6,14 @@ const API_BASE =
     ? (import.meta as any).env.VITE_API_URL
     : '/api';
 
+class ApiError extends Error {
+  data: Record<string, unknown>;
+  constructor(message: string, data: Record<string, unknown>) {
+    super(message);
+    this.data = data;
+  }
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: 'include',
@@ -17,7 +25,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Błąd sieci' }));
-    throw new Error((err as any).error || 'Błąd sieci');
+    throw new ApiError((err as any).error || 'Błąd sieci', err as Record<string, unknown>);
   }
   return res.json() as Promise<T>;
 }
@@ -28,8 +36,8 @@ class ApiClient {
     email: string;
     password: string;
     avatarColor?: string;
-  }): Promise<User> {
-    return request<User>('/auth/register', {
+  }): Promise<{ pending: true; email: string; message: string }> {
+    return request<{ pending: true; email: string; message: string }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
@@ -317,6 +325,42 @@ class ApiClient {
 
   async markMessagesRead(userId: string): Promise<void> {
     try { await request(`/messages/${userId}/read`, { method: 'PUT' }); } catch {}
+  }
+
+  // ── Weryfikacja email + reset hasła ──────────────────────────
+  async verifyEmail(email: string, code: string): Promise<import('../types').User> {
+    return request<import('../types').User>('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ email, code }),
+    });
+  }
+
+  async resendVerification(email: string): Promise<void> {
+    await request('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async forgotPassword(email: string): Promise<void> {
+    await request('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async verifyResetCode(email: string, code: string): Promise<void> {
+    await request('/auth/verify-reset-code', {
+      method: 'POST',
+      body: JSON.stringify({ email, code }),
+    });
+  }
+
+  async resetPassword(email: string, code: string, newPassword: string): Promise<import('../types').User> {
+    return request<import('../types').User>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, code, newPassword }),
+    });
   }
 
   async uploadFile(file: File): Promise<string> {
