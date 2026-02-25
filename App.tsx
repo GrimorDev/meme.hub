@@ -408,7 +408,7 @@ const App: React.FC = () => {
               {/* Notifications */}
               <div className="space-y-4">
                  <h4 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] flex items-center gap-2">
-                    <BellIcon size={12} /> Powiadomienia
+                    <Bell size={12} /> Powiadomienia
                  </h4>
                  <div className="space-y-2">
                     <SettingItem label="Powiadomienia Push" description="Reakcje i komentarze pod postami" active={user.settings?.enableNotifications} onToggle={(v) => updateSetting('enableNotifications', v)} />
@@ -423,7 +423,7 @@ const App: React.FC = () => {
                  <div className="bg-zinc-950/50 p-4 rounded-2xl border border-zinc-800 space-y-3">
                     <p className="text-xs font-bold text-zinc-400">Domyślne Sortowanie</p>
                     <div className="grid grid-cols-3 gap-2">
-                        {(['HOT', 'FRESH', 'TOP'] as const).map(sort => (
+                        {(['HOT', 'NOWE', 'TOP'] as const).map(sort => (
                             <button 
                                 key={sort}
                                 onClick={() => updateSetting('defaultSort', sort)}

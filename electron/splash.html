@@ -21,38 +21,69 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: #0a0a0c;
-      border-radius: 22px;
-      border: 1px solid rgba(147, 51, 234, 0.28);
+      background: #0c0c0f;
+      border-radius: 24px;
+      border: 1px solid rgba(147, 51, 234, 0.22);
       box-shadow:
-        0 0 0 1px rgba(0,0,0,0.8),
-        0 0 50px rgba(147, 51, 234, 0.18),
-        0 30px 70px rgba(0, 0, 0, 0.95),
-        inset 0 1px 0 rgba(255, 255, 255, 0.04);
-      animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        0 0 0 1px rgba(0,0,0,0.9),
+        0 0 80px rgba(124, 58, 237, 0.12),
+        0 40px 80px rgba(0, 0, 0, 0.98);
+      animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+      transition: opacity 0.35s ease;
+    }
+
+    .container.fade-out {
+      opacity: 0;
+      transform: scale(0.97);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+
+    /* ── Ring SVG ── */
+    .ring-wrap {
+      position: relative;
+      width: 110px;
+      height: 110px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ring-svg {
+      position: absolute;
+      inset: 0;
+      width: 110px;
+      height: 110px;
+      transform: rotate(-90deg);
+    }
+
+    .ring-track {
+      fill: none;
+      stroke: rgba(124, 58, 237, 0.12);
+      stroke-width: 2;
+    }
+
+    .ring-progress {
+      fill: none;
+      stroke: url(#ringGrad);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-dasharray: 314;
+      stroke-dashoffset: 314;
+      animation: ringFill 1.9s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
     }
 
     /* ── Logo ── */
-    .logo-wrap {
-      position: relative;
-      animation: float 1.7s ease-in-out infinite;
-    }
-
-    .logo-glow {
-      position: absolute;
-      inset: -12px;
-      border-radius: 30px;
-      background: radial-gradient(ellipse at center, rgba(147, 51, 234, 0.35) 0%, transparent 70%);
-      animation: glowPulse 1.7s ease-in-out infinite;
-    }
-
     .logo {
       position: relative;
-      width: 90px;
-      height: 90px;
-      border-radius: 20px;
+      width: 78px;
+      height: 78px;
+      border-radius: 18px;
       overflow: hidden;
-      border: 1px solid rgba(147, 51, 234, 0.35);
+      border: 1px solid rgba(147, 51, 234, 0.3);
+      box-shadow:
+        0 0 24px rgba(124, 58, 237, 0.25),
+        inset 0 1px 0 rgba(255,255,255,0.06);
+      animation: logoPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
     }
 
     .logo img {
@@ -64,89 +95,90 @@
 
     /* ── Tekst ── */
     .name {
-      margin-top: 20px;
-      font-size: 23px;
+      margin-top: 22px;
+      font-size: 20px;
       font-weight: 900;
-      letter-spacing: 0.2em;
+      letter-spacing: 0.25em;
       text-transform: uppercase;
-      font-style: italic;
       color: #ffffff;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
     }
 
     .tagline {
-      margin-top: 5px;
-      font-size: 9.5px;
-      font-weight: 700;
+      margin-top: 6px;
+      font-size: 9px;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.28em;
-      color: #3f3f46;
+      letter-spacing: 0.3em;
+      color: rgba(147, 51, 234, 0.55);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both;
     }
 
-    /* ── Dots ── */
-    .dots-row {
-      margin-top: 36px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
+    /* ── Progress bar ── */
+    .progress-wrap {
+      position: absolute;
+      bottom: 28px;
+      left: 36px;
+      right: 36px;
+      height: 2px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 2px;
+      overflow: hidden;
     }
 
-    .dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: #7c3aed;
-      animation: dotBounce 1.2s ease-in-out infinite;
-    }
-
-    .dot:nth-child(2) {
-      animation-delay: 0.15s;
-      background: #9333ea;
-    }
-
-    .dot:nth-child(3) {
-      animation-delay: 0.3s;
-      background: #a855f7;
-    }
-
-    .dots-label {
-      margin-left: 7px;
-      font-size: 9.5px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.22em;
-      color: #3f3f46;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #7c3aed, #a855f7);
+      animation: progressFill 1.85s cubic-bezier(0.4, 0, 0.2, 1) 0.15s forwards;
+      box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
     }
 
     /* ── Keyframes ── */
-    @keyframes float {
-      0%, 100% { transform: translateY(0px); }
-      50%       { transform: translateY(-13px); }
-    }
-
-    @keyframes glowPulse {
-      0%, 100% { opacity: 0.5; transform: scale(0.95); }
-      50%       { opacity: 1;   transform: scale(1.05); }
-    }
-
-    @keyframes dotBounce {
-      0%, 80%, 100% { transform: scale(0.55); opacity: 0.25; }
-      40%            { transform: scale(1);    opacity: 1; }
-    }
-
     @keyframes fadeIn {
-      from { opacity: 0; transform: scale(0.94); }
+      from { opacity: 0; transform: scale(0.95); }
       to   { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes logoPop {
+      from { opacity: 0; transform: scale(0.7); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes ringFill {
+      from { stroke-dashoffset: 314; }
+      to   { stroke-dashoffset: 0; }
+    }
+
+    @keyframes progressFill {
+      from { width: 0%; }
+      to   { width: 100%; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="container" id="container">
 
-    <div class="logo-wrap">
-      <div class="logo-glow"></div>
+    <div class="ring-wrap">
+      <svg class="ring-svg" viewBox="0 0 110 110">
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#7c3aed" />
+            <stop offset="100%" stop-color="#c084fc" />
+          </linearGradient>
+        </defs>
+        <circle class="ring-track"    cx="55" cy="55" r="50" />
+        <circle class="ring-progress" cx="55" cy="55" r="50" />
+      </svg>
+
       <div class="logo">
         <img src="./icon.png" alt="Memster" />
       </div>
@@ -155,13 +187,19 @@
     <div class="name">MEMSTER</div>
     <div class="tagline">Społeczność memów</div>
 
-    <div class="dots-row">
-      <div class="dot"></div>
-      <div class="dot"></div>
-      <div class="dot"></div>
-      <div class="dots-label">Ładowanie</div>
+    <div class="progress-wrap">
+      <div class="progress-bar"></div>
     </div>
 
   </div>
+
+  <script>
+    // Fade-out po sygnale od main.js
+    window.addEventListener('message', (e) => {
+      if (e.data === 'close') {
+        document.getElementById('container').classList.add('fade-out');
+      }
+    });
+  </script>
 </body>
 </html>

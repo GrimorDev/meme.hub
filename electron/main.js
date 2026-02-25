@@ -4,12 +4,18 @@ const path = require('path')
 const PRODUCTION_URL = 'https://memster.pl'
 
 let splashWindow = null
+let mainWindow = null            // globalna ref do głównego okna
+let splashReady = false          // splash załadowany
+let appReady = false             // główne okno gotowe
+let splashShownAt = 0            // timestamp pojawienia się splash
+
+const SPLASH_MIN_MS = 2000       // minimum 2 sekundy
 
 // ── Splash screen ────────────────────────────────────────────
 function createSplash() {
   splashWindow = new BrowserWindow({
-    width: 320,
-    height: 390,
+    width: 340,
+    height: 400,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -27,7 +33,39 @@ function createSplash() {
 
   splashWindow.once('ready-to-show', () => {
     splashWindow.show()
+    splashShownAt = Date.now()
+    splashReady = true
+    // Jeśli główne okno zdążyło się już załadować — sprawdź czy można zamknąć
+    maybeCloseSplash(mainWindow)
   })
+}
+
+// Fade-out + zamknięcie z zachowaniem minimum 2s
+function maybeCloseSplash(win) {
+  if (!splashReady || !appReady) return
+
+  const elapsed = Date.now() - splashShownAt
+  const remaining = Math.max(0, SPLASH_MIN_MS - elapsed)
+
+  setTimeout(() => {
+    // Wyślij sygnał CSS fade-out
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.webContents.executeJavaScript(
+        `document.getElementById('container').classList.add('fade-out')`
+      ).catch(() => {})
+    }
+    // Zamknij okno po zakończeniu animacji (350ms)
+    setTimeout(() => {
+      if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.close()
+        splashWindow = null
+      }
+      if (win && !win.isDestroyed()) {
+        win.show()
+        win.focus()
+      }
+    }, 370)
+  }, remaining)
 }
 
 function closeSplash() {
@@ -60,6 +98,8 @@ function createWindow() {
     show: false,
   })
 
+  mainWindow = win   // globalna ref dla splash callback
+
   // Ukryj domyślne menu
   Menu.setApplicationMenu(null)
 
@@ -70,19 +110,17 @@ function createWindow() {
   // Załaduj aplikację
   win.loadURL(PRODUCTION_URL)
 
-  // Fallback — jeśli po 12 s strona nadal nie gotowa (brak internetu), zamknij splash
+  // Fallback — brak internetu / timeout 12 s
   const splashTimeout = setTimeout(() => {
-    closeSplash()
-    win.show()
-    win.focus()
+    appReady = true
+    maybeCloseSplash(win)
   }, 12000)
 
-  // Pokaż okno po załadowaniu, zamknij splash
+  // Główne okno gotowe — zgłoś i sprawdź czy można zamknąć splash
   win.once('ready-to-show', () => {
     clearTimeout(splashTimeout)
-    closeSplash()
-    win.show()
-    win.focus()
+    appReady = true
+    maybeCloseSplash(win)
   })
 
   // Linki zewnętrzne otwieraj w przeglądarce systemowej
