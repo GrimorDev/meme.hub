@@ -28,6 +28,10 @@ services:
       PORT: 4000
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       UPLOADS_DIR: /app/uploads
+      SMTP_HOST: ${SMTP_HOST:-ssl0.ovh.net}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-no-reply@memster.pl}
+      SMTP_PASS: ${SMTP_PASS}
     volumes:
       - uploads_data:/app/uploads
     depends_on:
