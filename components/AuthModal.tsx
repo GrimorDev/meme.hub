@@ -66,19 +66,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }) => {
   const verifyCooldown  = useCooldown(60);
   const resetCooldown   = useCooldown(60);
 
-  // Reset do ekranu logowania przy każdym zamknięciu modalu
-  useEffect(() => {
-    if (!isOpen) resetAll();
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
+  // Muszą być przed useEffect i przed early return
   const goTo = (s: AuthStep) => { setStep(s); setError(''); setInfo(''); };
   const resetAll = () => {
     setStep('login'); setUsername(''); setEmail(''); setPassword('');
     setCode(''); setNewPassword(''); setConfirmPassword('');
     setPendingEmail(''); setError(''); setInfo('');
   };
+
+  // Reset do ekranu logowania przy każdym zamknięciu modalu
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!isOpen) resetAll();
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   const pwAllGood = pwChecks.every(c => c.test(newPassword || password));
 
