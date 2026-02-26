@@ -1,6 +1,5 @@
-
 import React, { useState, useRef } from 'react';
-import { X, Upload, Send, PenTool, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { X, Upload, Send, PenTool, Sparkles, Loader2, ChevronDown } from 'lucide-react';
 import { db } from '../services/db';
 import { User, MEME_CATEGORIES } from '../types';
 
@@ -12,22 +11,23 @@ interface UploadMemeModalProps {
   user: User | null;
 }
 
+const selectCls = `w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-3.5 text-sm
+  focus:border-purple-500 outline-none transition-all font-medium text-white appearance-none cursor-pointer
+  hover:border-zinc-700`;
+
 const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSwitchToStudio, onUploadSuccess, user }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [caption, setCaption] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [imageFile, setImageFile]       = useState<File | null>(null);
+  const [caption, setCaption]           = useState('');
+  const [mainCategory, setMainCategory] = useState('');
+  const [subCategory, setSubCategory]   = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]               = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  const toggleCategory = (id: string) => {
-    setSelectedCategories(prev =>
-      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
-    );
-  };
+  const selectedCat = MEME_CATEGORIES.find(c => c.id === mainCategory);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -42,25 +42,30 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!imageFile || !user) return;
+    if (!mainCategory) {
+      setError('Wybierz kategorię mema');
+      return;
+    }
     setIsPublishing(true);
     setError('');
 
     try {
       const url = await db.uploadFile(imageFile);
-      const tags = selectedCategories.length > 0 ? selectedCategories : ['random'];
+      const tag = subCategory || mainCategory;
       await db.createPost({
         url,
-        caption: caption || 'Bez podpisu',
+        caption: caption.trim() || 'Bez podpisu',
         author: user.username,
         avatarColor: user.avatarColor,
-        tags,
+        tags: [tag],
         timeAgo: 'Teraz',
       });
 
       setImagePreview(null);
       setImageFile(null);
       setCaption('');
-      setSelectedCategories([]);
+      setMainCategory('');
+      setSubCategory('');
       onClose();
       onUploadSuccess();
     } catch (err: any) {
@@ -81,12 +86,13 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
         </button>
 
         <div className="p-8 pb-4">
-          <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white mb-2">Dodaj Nową Moc</h2>
+          <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white mb-1">Dodaj Nową Moc</h2>
           <p className="text-zinc-500 text-sm font-medium">Wgraj gotowy obrazek lub stwórz go od podstaw w studiu.</p>
         </div>
 
         <div className="flex-1 overflow-y-auto p-8 pt-4 custom-scrollbar">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
             {/* Lewa kolumna — upload */}
             <div className="space-y-4">
               <div
@@ -118,6 +124,7 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
               </div>
 
               <button
+                type="button"
                 onClick={onSwitchToStudio}
                 className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 border border-zinc-700"
               >
@@ -126,48 +133,71 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
               </button>
             </div>
 
-            {/* Prawa kolumna — opis + kategorie */}
+            {/* Prawa kolumna */}
             <form onSubmit={handlePublish} className="flex flex-col gap-5">
+
+              {/* Opis */}
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Opis / Tytuł</label>
                 <textarea
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
                   placeholder="Wpisz coś śmiesznego..."
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-sm focus:border-green-500 outline-none transition-all font-bold h-24 resize-none"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-sm focus:border-purple-500 outline-none transition-all font-medium h-24 resize-none"
                 />
               </div>
 
+              {/* Kategoria główna */}
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Kategoria</label>
-                <div className="flex flex-wrap gap-2">
-                  {MEME_CATEGORIES.map(cat => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => toggleCategory(cat.id)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                        selectedCategories.includes(cat.id)
-                          ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/20'
-                          : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200'
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
+                <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest flex items-center gap-1">
+                  Kategoria <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={mainCategory}
+                    onChange={e => { setMainCategory(e.target.value); setSubCategory(''); setError(''); }}
+                    className={selectCls + (mainCategory ? ' text-white' : ' text-zinc-500')}
+                    required
+                  >
+                    <option value="">— Wybierz kategorię —</option>
+                    {MEME_CATEGORIES.map(c => (
+                      <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
                 </div>
-                {selectedCategories.length === 0 && (
-                  <p className="text-[10px] text-zinc-600 font-medium">Brak = trafi do "Random"</p>
-                )}
               </div>
 
+              {/* Podkategoria */}
+              {selectedCat && selectedCat.subcategories && selectedCat.subcategories.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">
+                    Podkategoria <span className="text-zinc-600">(opcjonalna)</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={subCategory}
+                      onChange={e => setSubCategory(e.target.value)}
+                      className={selectCls + (subCategory ? ' text-white' : ' text-zinc-500')}
+                    >
+                      <option value="">— Ogólnie ({selectedCat.label}) —</option>
+                      {selectedCat.subcategories.map(s => (
+                        <option key={s.id} value={s.id}>{s.label}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+                  </div>
+                </div>
+              )}
+
+              {/* Info + błąd + submit */}
               <div className="space-y-4 pt-2 mt-auto">
                 <div className="bg-zinc-950/50 p-4 rounded-2xl border border-zinc-800/50 flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
-                    <ImageIcon size={16} />
+                  <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500 shrink-0">
+                    <Sparkles size={16} />
                   </div>
                   <p className="text-[10px] text-zinc-500 font-medium leading-tight">
-                    Twoja moc pojawi się w zakładce "FRESH" i będzie dostępna dla wszystkich obywateli Hubu.
+                    Twój mem pojawi się w zakładce <span className="text-zinc-300 font-bold">"NOWE"</span> i będzie widoczny dla wszystkich użytkowników.
                   </p>
                 </div>
 
@@ -176,7 +206,7 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
                 <button
                   type="submit"
                   disabled={!imageFile || isPublishing}
-                  className="w-full bg-gradient-to-r from-green-600 to-emerald-500 text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-green-600/20 text-sm uppercase tracking-[0.2em] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-purple-600/20 text-sm uppercase tracking-[0.2em] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isPublishing ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
                   {isPublishing ? 'PUBLIKUJĘ...' : 'WYLĄDUJ NA FEEDZIE'}
@@ -190,6 +220,7 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+        select option { background: #18181b; color: #fff; }
       `}</style>
     </div>
   );

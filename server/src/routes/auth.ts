@@ -306,6 +306,55 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+// ── Zmiana hasła ─────────────────────────────────────────────
+router.post('/change-password', requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body as {
+      currentPassword?: string;
+      newPassword?: string;
+    };
+
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ error: 'Podaj obecne i nowe hasło' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.session.userId } });
+    if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+      res.status(401).json({ error: 'Nieprawidłowe obecne hasło' });
+      return;
+    }
+
+    const pwError = validatePassword(newPassword);
+    if (pwError) {
+      res.status(400).json({ error: pwError });
+      return;
+    }
+
+    const hash = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({ where: { id: user.id }, data: { password: hash } });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// ── Usunięcie konta ───────────────────────────────────────────
+router.delete('/delete-account', requireAuth, async (req, res) => {
+  try {
+    await prisma.user.delete({ where: { id: req.session.userId } });
+    req.session.destroy(() => {
+      res.clearCookie('connect.sid');
+      res.json({ ok: true });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
 // ── Logowanie ─────────────────────────────────────────────────
 router.post('/login', async (req, res) => {
   try {

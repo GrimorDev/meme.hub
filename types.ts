@@ -1,5 +1,5 @@
 
-export type AppView = 'FEED' | 'STUDIO' | 'ROAST' | 'DETAIL' | 'PROFILE' | 'ADMIN' | 'DOWNLOADS' | 'MESSAGES';
+export type AppView = 'FEED' | 'STUDIO' | 'ROAST' | 'DETAIL' | 'PROFILE' | 'ADMIN' | 'DOWNLOADS' | 'MESSAGES' | 'SETTINGS';
 
 export type SliderMode = 'SIMPLE' | 'RUNNER' | 'GRAVITY' | 'MATH' | 'VOICE' | 'DICE' | 'SHAKE';
 

@@ -327,6 +327,18 @@ class ApiClient {
     try { await request(`/messages/${userId}/read`, { method: 'PUT' }); } catch {}
   }
 
+  // ── Zmiana hasła + usunięcie konta ───────────────────────────
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await request('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  async deleteAccount(): Promise<void> {
+    await request('/auth/delete-account', { method: 'DELETE' });
+  }
+
   // ── Weryfikacja email + reset hasła ──────────────────────────
   async verifyEmail(email: string, code: string): Promise<import('../types').User> {
     return request<import('../types').User>('/auth/verify-email', {

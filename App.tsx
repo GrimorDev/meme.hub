@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { LayoutGrid, PenTool, Flame, User as UserIcon, Settings, LogOut, LogIn, Plus, X, Shield, Palette, Eye, Bell, MessageSquare, ChevronRight } from 'lucide-react';
-import { AppView, MemePost, User, UserSettings } from './types';
+import { LayoutGrid, PenTool, Flame, Settings, LogOut, LogIn, Plus, Shield, Bell, MessageSquare } from 'lucide-react';
+import { AppView, MemePost, User } from './types';
 import MemeFeed from './components/MemeFeed';
 import MemeStudio from './components/MemeStudio';
 import RoastStation from './components/RoastStation';
@@ -13,6 +13,7 @@ import NotificationsPanel from './components/NotificationsPanel';
 import MessagesView from './components/MessagesView';
 import AuthModal from './components/AuthModal';
 import UploadMemeModal from './components/UploadMemeModal';
+import SettingsPage from './components/SettingsPage';
 import SearchBar from './components/SearchBar';
 import { db } from './services/db';
 
@@ -20,7 +21,6 @@ const App: React.FC = () => {
   const [view, setView] = useState<AppView>('FEED');
   const [selectedMeme, setSelectedMeme] = useState<MemePost | null>(null);
   const [selectedProfileUsername, setSelectedProfileUsername] = useState<string | null>(null);
-  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
@@ -57,6 +57,8 @@ const App: React.FC = () => {
       setView('ADMIN');
     } else if (path === '/downloads') {
       setView('DOWNLOADS');
+    } else if (path === '/settings') {
+      setView('SETTINGS');
     } else if (path === '/messages' || path.startsWith('/messages/')) {
       const uid = path.startsWith('/messages/') ? path.slice(10) : null;
       setSelectedMessageUserId(uid);
@@ -128,8 +130,13 @@ const App: React.FC = () => {
   const handleLogout = () => {
     db.logout();
     setUser(null);
-    setShowSettingsPanel(false);
-    if (view === 'STUDIO') setView('FEED');
+    if (view === 'STUDIO' || view === 'SETTINGS') setView('FEED');
+  };
+
+  const handleNavigateToSettings = () => {
+    setView('SETTINGS');
+    window.history.pushState({}, '', '/settings');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleMemeSelect = (meme: MemePost) => {
@@ -203,14 +210,6 @@ const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const updateSetting = <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
-    if (!user) return;
-    const newSettings = { ...user.settings!, [key]: value };
-    db.updateUser(user.id, { settings: newSettings }).then((updatedUser) => {
-      if (updatedUser) handleUserUpdate(updatedUser);
-    });
-  };
-
   const protectedAction = (action: () => void) => {
     if (!user) {
       setIsAuthModalOpen(true);
@@ -280,7 +279,7 @@ const App: React.FC = () => {
 
             {user && (
               <button
-                onClick={() => { setShowNotificationsPanel(p => !p); setShowSettingsPanel(false); }}
+                onClick={() => { setShowNotificationsPanel(p => !p); }}
                 className={`relative p-2 transition-all rounded-xl border ${showNotificationsPanel ? 'bg-purple-500/10 border-purple-500/50 text-purple-400' : 'text-zinc-400 hover:text-white border-transparent'}`}
               >
                 <Bell size={22} />
@@ -294,7 +293,7 @@ const App: React.FC = () => {
 
             {user && (
               <button
-                onClick={() => { handleNavigateToMessages(); setShowNotificationsPanel(false); setShowSettingsPanel(false); }}
+                onClick={() => { handleNavigateToMessages(); setShowNotificationsPanel(false); }}
                 className={`relative p-2 transition-all rounded-xl border ${view === 'MESSAGES' ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' : 'text-zinc-400 hover:text-white border-transparent'}`}
               >
                 <MessageSquare size={22} />
@@ -308,8 +307,8 @@ const App: React.FC = () => {
 
             {user && (
               <button
-                onClick={() => { setShowSettingsPanel(!showSettingsPanel); setShowNotificationsPanel(false); }}
-                className={`p-2 transition-all rounded-xl border ${showSettingsPanel ? `bg-${accentClass}-500/10 border-${accentClass}-500/50 text-${accentClass}-500` : 'text-zinc-400 hover:text-white border-transparent'}`}
+                onClick={() => { setShowNotificationsPanel(false); handleNavigateToSettings(); }}
+                className={`p-2 transition-all rounded-xl border ${view === 'SETTINGS' ? `bg-${accentClass}-500/10 border-${accentClass}-500/50 text-${accentClass}-500` : 'text-zinc-400 hover:text-white border-transparent'}`}
               >
                 <Settings size={22} />
               </button>
@@ -359,95 +358,6 @@ const App: React.FC = () => {
           </div>
         </div>
       </nav>
-
-      {/* Modern User Settings Panel */}
-      {showSettingsPanel && user && (
-        <div className="fixed top-20 right-4 w-96 bg-zinc-900 border border-zinc-800 p-8 rounded-[2.5rem] shadow-2xl z-[60] animate-in fade-in slide-in-from-top-4 duration-300 max-h-[85vh] overflow-y-auto custom-scrollbar">
-           <div className="space-y-8">
-              <div className="flex justify-between items-center mb-2">
-                <div>
-                    <h3 className="font-black italic uppercase tracking-widest text-white text-lg">Ustawienia</h3>
-                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Witaj, {user.username}</p>
-                </div>
-                <button onClick={() => setShowSettingsPanel(false)} className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-full text-zinc-500 hover:text-white transition-all"><X size={16} /></button>
-              </div>
-
-              {/* Account Section */}
-              <div className="space-y-4">
-                 <h4 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] flex items-center gap-2">
-                    <Shield size={12} /> Konto
-                 </h4>
-                 <div className="space-y-2">
-                    <SettingItem label="Pokaż datę dołączenia" description="Wyświetlaj datę rejestracji na Twoim profilu" active={user.settings?.showJoinDate} onToggle={(v) => updateSetting('showJoinDate', v)} />
-                 </div>
-              </div>
-
-              {/* Visual Section */}
-              <div className="space-y-4">
-                 <h4 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] flex items-center gap-2">
-                    <Palette size={12} /> Wygląd Interfejsu
-                 </h4>
-                 <div className="space-y-3">
-                    <div className="bg-zinc-950/50 p-4 rounded-2xl border border-zinc-800">
-                        <p className="text-xs font-bold text-zinc-400 mb-3">Kolor Akcentu</p>
-                        <div className="flex gap-3">
-                            {(['purple', 'green', 'orange', 'blue'] as const).map(color => (
-                                <button 
-                                    key={color}
-                                    onClick={() => updateSetting('accentColor', color)}
-                                    className={`w-10 h-10 rounded-xl border-2 transition-all ${user.settings?.accentColor === color ? 'border-white scale-110 shadow-lg' : 'border-transparent hover:scale-105'}`}
-                                    style={{ backgroundColor: color === 'purple' ? '#9333ea' : color === 'green' ? '#10b981' : color === 'orange' ? '#f97316' : '#3b82f6' }}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                    <SettingItem label="Ukryj Licznik Lajków" description="Nie pokazuj liczby polubień na profilu" active={user.settings?.hideLikeCounts} onToggle={(v) => updateSetting('hideLikeCounts', v)} />
-                 </div>
-              </div>
-
-              {/* Notifications */}
-              <div className="space-y-4">
-                 <h4 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] flex items-center gap-2">
-                    <Bell size={12} /> Powiadomienia
-                 </h4>
-                 <div className="space-y-2">
-                    <SettingItem label="Powiadomienia Push" description="Reakcje i komentarze pod postami" active={user.settings?.enableNotifications} onToggle={(v) => updateSetting('enableNotifications', v)} />
-                 </div>
-              </div>
-
-              {/* Feed Preferences */}
-              <div className="space-y-4">
-                 <h4 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] flex items-center gap-2">
-                    <LayoutGrid size={12} /> Preferencje Feedu
-                 </h4>
-                 <div className="bg-zinc-950/50 p-4 rounded-2xl border border-zinc-800 space-y-3">
-                    <p className="text-xs font-bold text-zinc-400">Domyślne Sortowanie</p>
-                    <div className="grid grid-cols-3 gap-2">
-                        {(['HOT', 'NOWE', 'TOP'] as const).map(sort => (
-                            <button 
-                                key={sort}
-                                onClick={() => updateSetting('defaultSort', sort)}
-                                className={`py-2 rounded-lg text-[10px] font-black border transition-all ${user.settings?.defaultSort === sort ? `bg-${accentClass}-600 border-${accentClass}-500 text-white` : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-white'}`}
-                            >
-                                {sort}
-                            </button>
-                        ))}
-                    </div>
-                 </div>
-              </div>
-
-              <div className="pt-6 border-t border-zinc-800">
-                <button 
-                    onClick={handleLogout}
-                    className="w-full py-4 bg-red-900/10 hover:bg-red-900/20 text-red-500 rounded-2xl border border-red-900/20 font-black uppercase tracking-widest text-[10px] transition-all"
-                >
-                    Wyloguj się
-                </button>
-                <p className="text-[8px] text-zinc-600 mt-4 text-center italic">Wszystkie ustawienia są zapisywane w Twoim profilu Memster</p>
-              </div>
-           </div>
-        </div>
-      )}
 
       {/* Panel powiadomień */}
       {showNotificationsPanel && user && (
@@ -582,6 +492,15 @@ const App: React.FC = () => {
         {view === 'ADMIN' && user?.role === 'admin' && (
           <AdminPanel />
         )}
+        {view === 'SETTINGS' && user && (
+          <SettingsPage
+            user={user}
+            accentClass={accentClass}
+            onUserUpdate={handleUserUpdate}
+            onLogout={handleLogout}
+            onBack={() => { setView('FEED'); window.history.pushState({}, '', '/'); }}
+          />
+        )}
       </main>
 
       <AuthModal 
@@ -606,21 +525,6 @@ const App: React.FC = () => {
     </div>
   );
 };
-
-const SettingItem: React.FC<{ label: string; description: string; active?: boolean; onToggle: (v: boolean) => void }> = ({ label, description, active, onToggle }) => (
-    <div className="flex items-center justify-between p-4 bg-zinc-950/50 rounded-2xl border border-zinc-800">
-        <div className="space-y-0.5">
-            <p className="text-sm font-bold text-zinc-100">{label}</p>
-            <p className="text-[10px] text-zinc-500 font-medium">{description}</p>
-        </div>
-        <button 
-            onClick={() => onToggle(!active)}
-            className={`w-12 h-6 rounded-full transition-all relative ${active ? 'bg-purple-600' : 'bg-zinc-800'}`}
-        >
-            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${active ? 'left-7' : 'left-1'}`} />
-        </button>
-    </div>
-);
 
 const MobileNavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string; accent?: boolean; danger?: boolean }> = ({ active, onClick, icon, label, accent, danger }) => (
   <button
