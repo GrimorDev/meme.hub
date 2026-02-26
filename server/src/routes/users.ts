@@ -93,21 +93,52 @@ router.get('/:username', async (req, res) => {
   }
 });
 
+const USERNAME_CHANGE_DAYS = 60;
+
 router.put('/:id', requireAuth, async (req, res) => {
   try {
     if (req.params.id !== req.session.userId) {
       res.status(403).json({ error: 'Brak uprawnień' });
       return;
     }
-    const { description, avatarUrl, bannerUrl, settings } = req.body as {
+    const { username, description, avatarUrl, bannerUrl, settings } = req.body as {
+      username?: string;
       description?: string;
       avatarUrl?: string;
       bannerUrl?: string;
       settings?: object;
     };
+
+    // ── Zmiana nazwy użytkownika z limitem 60 dni ──────────────
+    let usernameUpdate: { username?: string; usernameChangedAt?: Date } = {};
+    if (username !== undefined) {
+      // Walidacja formatu
+      const val = username.trim();
+      if (val.length < 3)                       { res.status(400).json({ error: 'Min. 3 znaki' }); return; }
+      if (val.length > 20)                      { res.status(400).json({ error: 'Maks. 20 znaków' }); return; }
+      if (!/^[A-Za-z0-9_-]+$/.test(val))        { res.status(400).json({ error: 'Tylko litery, cyfry, _ i -' }); return; }
+
+      // Sprawdź czy nie za wcześnie
+      const current = await prisma.user.findUnique({ where: { id: req.params.id }, select: { username: true, usernameChangedAt: true } });
+      if (!current) { res.status(404).json({ error: 'Nie znaleziono użytkownika' }); return; }
+
+      if (val !== current.username) {
+        if (current.usernameChangedAt) {
+          const daysSince = (Date.now() - current.usernameChangedAt.getTime()) / 86_400_000;
+          if (daysSince < USERNAME_CHANGE_DAYS) {
+            const remaining = Math.ceil(USERNAME_CHANGE_DAYS - daysSince);
+            res.status(429).json({ error: `Możesz zmienić nazwę za ${remaining} ${remaining === 1 ? 'dzień' : remaining < 5 ? 'dni' : 'dni'}` });
+            return;
+          }
+        }
+        usernameUpdate = { username: val, usernameChangedAt: new Date() };
+      }
+    }
+
     const updated = await prisma.user.update({
       where: { id: req.params.id },
       data: {
+        ...usernameUpdate,
         ...(description !== undefined && { description }),
         ...(avatarUrl !== undefined && { avatarUrl }),
         ...(bannerUrl !== undefined && { bannerUrl }),
@@ -115,7 +146,11 @@ router.put('/:id', requireAuth, async (req, res) => {
       },
     });
     res.json(formatUser(updated));
-  } catch (err) {
+  } catch (err: any) {
+    if (err.code === 'P2002') {
+      res.status(409).json({ error: 'Ta nazwa użytkownika jest już zajęta' });
+      return;
+    }
     console.error(err);
     res.status(500).json({ error: 'Błąd serwera' });
   }

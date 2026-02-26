@@ -34,6 +34,7 @@ export interface User {
   email?: string;
   settings?: UserSettings;
   createdAt?: string;
+  usernameChangedAt?: string | null;
   role?: 'user' | 'admin';
   banned?: boolean;
 }

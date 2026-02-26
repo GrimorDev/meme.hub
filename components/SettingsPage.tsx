@@ -126,6 +126,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, accentClass, onUserUp
     } catch { /* ignoruj */ }
   };
 
+  // ── Cooldown zmiany username ──────────────────────────────
+  const USERNAME_CHANGE_DAYS = 60;
+  const usernameChangedAt = user.usernameChangedAt ? new Date(user.usernameChangedAt) : null;
+  const daysSinceChange = usernameChangedAt ? (Date.now() - usernameChangedAt.getTime()) / 86_400_000 : null;
+  const daysLeft = daysSinceChange !== null ? Math.ceil(USERNAME_CHANGE_DAYS - daysSinceChange) : 0;
+  const usernameBlocked = daysLeft > 0;
+
   // ── Zmiana username ───────────────────────────────────────
   const handleSaveUsername = async () => {
     setUsernameOk(''); setUsernameErr('');
@@ -136,7 +143,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, accentClass, onUserUp
     setSavingUsername(true);
     try {
       const updated = await db.updateUser(user.id, { username: val });
-      if (updated) { onUserUpdate(updated); setUsernameOk('Nazwa użytkownika zmieniona!'); }
+      if (updated) { onUserUpdate(updated); setUsernameOk('Nazwa użytkownika zmieniona! Kolejna zmiana możliwa za 60 dni.'); }
     } catch (err: any) {
       setUsernameErr(err.message || 'Błąd');
     } finally { setSavingUsername(false); }
@@ -221,25 +228,40 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, accentClass, onUserUp
 
               {/* Username */}
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Nazwa użytkownika</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Nazwa użytkownika</label>
+                  {usernameBlocked ? (
+                    <span className="text-[10px] font-bold text-amber-500 flex items-center gap-1">
+                      <Lock size={10} /> Zmiana za {daysLeft} {daysLeft === 1 ? 'dzień' : 'dni'}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-zinc-600">Zmiana max raz na 60 dni</span>
+                  )}
+                </div>
                 <div className="flex gap-3">
                   <input
                     type="text"
                     value={username}
                     onChange={e => setUsername(e.target.value)}
                     maxLength={20}
-                    className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium focus:border-purple-500 outline-none transition-all"
+                    disabled={usernameBlocked}
+                    className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium focus:border-purple-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <button
                     type="button"
                     onClick={handleSaveUsername}
-                    disabled={savingUsername || username.trim() === user.username}
+                    disabled={savingUsername || username.trim() === user.username || usernameBlocked}
                     className="px-4 py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-xs font-black transition-all flex items-center gap-2"
                   >
                     <Save size={14} />
                     {savingUsername ? '...' : 'Zapisz'}
                   </button>
                 </div>
+                {usernameBlocked && (
+                  <p className="text-[10px] text-amber-600/80 font-medium">
+                    Kolejną zmianę nazwy będziesz mógł wykonać za {daysLeft} {daysLeft === 1 ? 'dzień' : 'dni'}.
+                  </p>
+                )}
                 <StatusMsg ok={usernameOk} err={usernameErr} />
               </div>
             </div>

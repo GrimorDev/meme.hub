@@ -25,6 +25,7 @@ model User {
   verificationCodeExpiry DateTime?
   resetCode              String?
   resetCodeExpiry        DateTime?
+  usernameChangedAt      DateTime?
   createdAt              DateTime  @default(now())
 
   posts              MemePost[]
