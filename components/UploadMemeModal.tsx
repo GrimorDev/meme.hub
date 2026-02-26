@@ -21,6 +21,7 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
   const [caption, setCaption]           = useState('');
   const [mainCategory, setMainCategory] = useState('');
   const [subCategory, setSubCategory]   = useState('');
+  const [isNsfw, setIsNsfw]             = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError]               = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -59,6 +60,7 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
         avatarColor: user.avatarColor,
         tags: [tag],
         timeAgo: 'Teraz',
+        isNsfw,
       });
 
       setImagePreview(null);
@@ -200,6 +202,20 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
                     Twój mem pojawi się w zakładce <span className="text-zinc-300 font-bold">"NOWE"</span> i będzie widoczny dla wszystkich użytkowników.
                   </p>
                 </div>
+
+                {/* NSFW checkbox */}
+                <label className="flex items-center gap-3 p-4 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-red-500/50 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={isNsfw}
+                    onChange={e => setIsNsfw(e.target.checked)}
+                    className="w-4 h-4 accent-red-500"
+                  />
+                  <div>
+                    <p className="text-sm font-bold text-white">Treść dla dorosłych (NSFW)</p>
+                    <p className="text-[10px] text-zinc-500">Obraz zostanie automatycznie zamazany w feedzie</p>
+                  </div>
+                </label>
 
                 {error && <p className="text-red-500 text-xs font-bold text-center">{error}</p>}
 

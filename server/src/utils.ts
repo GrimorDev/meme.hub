@@ -29,6 +29,7 @@ export function formatPost(post: any, currentUserId?: string) {
     tags: post.tags.map((pt: any) => pt.tag.name),
     likedBy: post.likes.map((l: any) => l.userId),
     featured: post.featured ?? false,
+    isNsfw: post.isNsfw ?? false,
   };
 }
 

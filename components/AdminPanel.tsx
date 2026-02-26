@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Trash2, Ban, Flag, Users, Image, AlertTriangle, Check, X, RefreshCw, UserCheck, UserX, Sparkles, Settings, Save } from 'lucide-react';
+import { Shield, Trash2, Ban, Flag, Users, Image, AlertTriangle, Check, X, RefreshCw, UserCheck, UserX, Sparkles, Settings, Save, BarChart2, Clock } from 'lucide-react';
 import { db } from '../services/db';
-import { AdminUser, AdminReport, AdminUserReport, MemePost } from '../types';
+import { AdminUser, AdminReport, AdminUserReport, MemePost, AdminStats } from '../types';
 
-type Tab = 'reports' | 'user-reports' | 'posts' | 'users' | 'settings';
+type Tab = 'reports' | 'user-reports' | 'posts' | 'users' | 'settings' | 'stats';
 
 const AdminPanel: React.FC = () => {
   const [tab, setTab] = useState<Tab>('reports');
@@ -16,6 +16,9 @@ const AdminPanel: React.FC = () => {
   const [topConfig, setTopConfig] = useState<{ topMetric: string; topPeriod: number }>({ topMetric: 'likes', topPeriod: 7 });
   const [topConfigSaving, setTopConfigSaving] = useState(false);
   const [topConfigSaved, setTopConfigSaved] = useState(false);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [banHistory, setBanHistory] = useState<{ id: string; action: string; reason: string | null; createdAt: string; adminUsername: string }[]>([]);
+  const [banHistoryUser, setBanHistoryUser] = useState<{ id: string; username: string } | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -25,6 +28,7 @@ const AdminPanel: React.FC = () => {
       else if (tab === 'posts') setPosts(await db.adminGetPosts());
       else if (tab === 'users') setUsers(await db.adminGetUsers());
       else if (tab === 'settings') setTopConfig(await db.getTopConfig());
+      else if (tab === 'stats') setStats(await db.adminGetStats());
     } finally {
       setLoading(false);
     }
@@ -99,6 +103,16 @@ const AdminPanel: React.FC = () => {
     setPosts(prev => prev.map(p => p.id === id ? { ...p, featured: result.featured } : p));
   };
 
+  const handleShowBanHistory = async (userId: string, username: string) => {
+    setBanHistoryUser({ id: userId, username });
+    try {
+      const history = await db.adminGetBanHistory(userId);
+      setBanHistory(history);
+    } catch {
+      setBanHistory([]);
+    }
+  };
+
   const TabBtn: React.FC<{ t: Tab; icon: React.ReactNode; label: string; count?: number }> = ({ t, icon, label, count }) => (
     <button
       onClick={() => setTab(t)}
@@ -143,6 +157,7 @@ const AdminPanel: React.FC = () => {
         <TabBtn t="posts" icon={<Image size={16} />} label="Memy" />
         <TabBtn t="users" icon={<Users size={16} />} label="Użytkownicy" />
         <TabBtn t="settings" icon={<Settings size={16} />} label="Ustawienia TOP" />
+        <TabBtn t="stats" icon={<BarChart2 size={16} />} label="Statystyki" />
       </div>
 
       {/* Content */}
@@ -328,7 +343,15 @@ const AdminPanel: React.FC = () => {
                     </div>
                     <p className="text-xs text-zinc-500 truncate">{u.email} · {u._count.posts} postów</p>
                   </div>
-                  <div className="flex gap-2 shrink-0">
+                  <div className="flex gap-2 shrink-0 flex-wrap justify-end">
+                    {/* Historia banów */}
+                    <button
+                      onClick={() => handleShowBanHistory(u.id, u.username)}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold text-xs transition-all border bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 hover:text-white border-zinc-700"
+                      title="Historia banów"
+                    >
+                      <Clock size={12} /> Historia
+                    </button>
                     {/* Zmień rolę */}
                     <button
                       onClick={() => handleSetRole(u.id, u.username, u.role)}
@@ -358,6 +381,92 @@ const AdminPanel: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* STATS TAB — statystyki platformy */}
+          {tab === 'stats' && (
+            <div className="space-y-8">
+              {!stats ? (
+                <div className="py-16 text-center text-zinc-600 bg-zinc-900/30 rounded-3xl border border-zinc-800">
+                  <p className="font-bold">Brak danych statystycznych</p>
+                </div>
+              ) : (
+                <>
+                  {/* Kafelki statystyk */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+                    {[
+                      { label: 'Użytkownicy', value: stats.totalUsers, sub: `+${stats.newUsers7d} / 7d`, color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
+                      { label: 'Nowi (30d)', value: stats.newUsers30d, sub: `+${stats.newUsers7d} / 7d`, color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' },
+                      { label: 'Posty', value: stats.totalPosts, sub: `+${stats.newPosts7d} / 7d`, color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
+                      { label: 'Lajki', value: stats.totalLikes, sub: 'łącznie', color: 'text-pink-400', bg: 'bg-pink-500/10 border-pink-500/20' },
+                      { label: 'W kolejce', value: stats.pendingPosts, sub: 'oczekuje', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+                      { label: 'Zbanowani', value: stats.bannedUsers, sub: 'użytkowników', color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' },
+                    ].map(({ label, value, sub, color, bg }) => (
+                      <div key={label} className={`flex flex-col gap-2 p-5 rounded-2xl border ${bg}`}>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{label}</span>
+                        <span className={`text-3xl font-black ${color}`}>{value.toLocaleString()}</span>
+                        <span className="text-[10px] text-zinc-600 font-medium">{sub}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Komentarze */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex flex-col gap-2 p-5 rounded-2xl border bg-zinc-900 border-zinc-800">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Komentarze łącznie</span>
+                      <span className="text-3xl font-black text-green-400">{stats.totalComments.toLocaleString()}</span>
+                      <span className="text-[10px] text-zinc-600 font-medium">+{stats.newComments7d} / 7d</span>
+                    </div>
+                    <div className="flex flex-col gap-2 p-5 rounded-2xl border bg-zinc-900 border-zinc-800">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Nowe posty dziś</span>
+                      <span className="text-3xl font-black text-orange-400">{stats.newPosts1d.toLocaleString()}</span>
+                      <span className="text-[10px] text-zinc-600 font-medium">ostatnie 24h</span>
+                    </div>
+                    <div className="flex flex-col gap-2 p-5 rounded-2xl border bg-zinc-900 border-zinc-800">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Aktywność (7d)</span>
+                      <span className="text-3xl font-black text-violet-400">{(stats.newUsers7d + stats.newPosts7d + stats.newComments7d).toLocaleString()}</span>
+                      <span className="text-[10px] text-zinc-600 font-medium">rejestracje + posty + komentarze</span>
+                    </div>
+                  </div>
+
+                  {/* Wykresy rejestracji i postów */}
+                  {stats.registrationsChart && stats.registrationsChart.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400">Rejestracje (ostatnie dni)</h3>
+                        <div className="flex items-end gap-1 h-24">
+                          {stats.registrationsChart.map((d) => {
+                            const max = Math.max(...stats.registrationsChart.map(x => x.count), 1);
+                            const pct = (d.count / max) * 100;
+                            return (
+                              <div key={d.day} className="flex-1 flex flex-col items-center gap-1" title={`${d.day}: ${d.count}`}>
+                                <div className="w-full bg-blue-500/70 rounded-t" style={{ height: `${Math.max(pct, 4)}%` }} />
+                                <span className="text-[8px] text-zinc-600 rotate-45 origin-left">{d.day.slice(5)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400">Nowe posty (ostatnie dni)</h3>
+                        <div className="flex items-end gap-1 h-24">
+                          {stats.postsChart.map((d) => {
+                            const max = Math.max(...stats.postsChart.map(x => x.count), 1);
+                            const pct = (d.count / max) * 100;
+                            return (
+                              <div key={d.day} className="flex-1 flex flex-col items-center gap-1" title={`${d.day}: ${d.count}`}>
+                                <div className="w-full bg-purple-500/70 rounded-t" style={{ height: `${Math.max(pct, 4)}%` }} />
+                                <span className="text-[8px] text-zinc-600 rotate-45 origin-left">{d.day.slice(5)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 
@@ -448,6 +557,46 @@ const AdminPanel: React.FC = () => {
             </div>
           )}
         </>
+      )}
+
+      {/* Ban History Modal */}
+      {banHistoryUser && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setBanHistoryUser(null)}>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200 max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-black uppercase italic text-white flex items-center gap-2">
+                <Clock size={18} /> Historia banów — @{banHistoryUser.username}
+              </h3>
+              <button onClick={() => setBanHistoryUser(null)} className="p-1 text-zinc-500 hover:text-white bg-zinc-800 rounded-full">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-3">
+              {banHistory.length === 0 ? (
+                <div className="py-10 text-center text-zinc-600">
+                  <Check size={32} className="mx-auto mb-2 text-green-500" />
+                  <p className="font-bold text-sm">Brak historii banów dla tego użytkownika</p>
+                </div>
+              ) : banHistory.map((entry) => (
+                <div key={entry.id} className={`flex items-start gap-3 p-4 rounded-2xl border ${entry.action === 'ban' ? 'bg-red-900/10 border-red-900/30' : 'bg-green-900/10 border-green-900/30'}`}>
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${entry.action === 'ban' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                    <Ban size={14} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-xs font-black uppercase ${entry.action === 'ban' ? 'text-red-400' : 'text-green-400'}`}>
+                        {entry.action === 'ban' ? 'Zbanowany' : 'Odbanowany'}
+                      </span>
+                      <span className="text-[10px] text-zinc-500">przez @{entry.adminUsername}</span>
+                    </div>
+                    {entry.reason && <p className="text-xs text-zinc-400 mt-1">{entry.reason}</p>}
+                    <p className="text-[10px] text-zinc-600 mt-1">{new Date(entry.createdAt).toLocaleString('pl-PL')}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Confirm Modal */}

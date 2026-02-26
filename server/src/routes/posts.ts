@@ -127,11 +127,13 @@ router.post('/', requireAuth, async (req, res) => {
       url,
       tags = [],
       description,
+      isNsfw = false,
     } = req.body as {
       caption?: string;
       url?: string;
       tags?: string[];
       description?: string;
+      isNsfw?: boolean;
     };
 
     if (!url || !caption) {
@@ -159,6 +161,7 @@ router.post('/', requireAuth, async (req, res) => {
         description,
         authorId: req.session.userId!,
         featured: false,
+        isNsfw: Boolean(isNsfw),
         tags: { create: tagUpserts },
       },
       include: POST_INCLUDE,

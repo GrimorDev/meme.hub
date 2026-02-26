@@ -39,6 +39,9 @@ model User {
   notifications      Notification[]
   sentMessages       Message[]    @relation("SentMessages")
   receivedMessages   Message[]    @relation("ReceivedMessages")
+  savedPosts         SavedPost[]
+  banHistoryTarget   BanHistory[] @relation("BanHistoryTarget")
+  banHistoryAdmin    BanHistory[] @relation("BanHistoryAdmin")
 
   @@map("users")
 }
@@ -90,6 +93,7 @@ model MemePost {
   description String?
   authorId    String
   featured    Boolean  @default(false)
+  isNsfw      Boolean  @default(false)
   createdAt   DateTime @default(now())
 
   author   User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -97,6 +101,7 @@ model MemePost {
   likes    PostLike[]
   comments Comment[]
   reports  Report[]
+  savedBy  SavedPost[]
 
   @@map("meme_posts")
 }
@@ -137,6 +142,7 @@ model Comment {
   postId    String
   authorId  String
   text      String
+  imageUrl  String?
   parentId  String?
   createdAt DateTime @default(now())
 
@@ -183,6 +189,32 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model SavedPost {
+  userId    String
+  postId    String
+  savedAt   DateTime @default(now())
+
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post MemePost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@map("saved_posts")
+}
+
+model BanHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  adminId   String
+  action    String   // 'ban' | 'unban'
+  reason    String?
+  createdAt DateTime @default(now())
+
+  user  User @relation("BanHistoryTarget",  fields: [userId],  references: [id], onDelete: Cascade)
+  admin User @relation("BanHistoryAdmin",   fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("ban_history")
 }
 
 model Message {

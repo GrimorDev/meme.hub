@@ -32,6 +32,7 @@ router.get('/posts/:id/comments', async (req, res) => {
         authorAvatarColor: c.author.avatarColor,
         authorAvatarUrl: c.author.avatarUrl ?? undefined,
         text: c.text,
+        imageUrl: (c as any).imageUrl ?? undefined,
         timeAgo: formatTimeAgo(c.createdAt),
         timestamp: c.createdAt.getTime(),
         likes: c._count.likes,
@@ -47,21 +48,23 @@ router.get('/posts/:id/comments', async (req, res) => {
 
 router.post('/posts/:id/comments', requireAuth, async (req, res) => {
   try {
-    const { text, parentId } = req.body as {
+    const { text, parentId, imageUrl } = req.body as {
       text?: string;
       parentId?: string;
+      imageUrl?: string;
     };
-    if (!text?.trim()) {
-      res.status(400).json({ error: 'Treść komentarza jest wymagana' });
+    if (!text?.trim() && !imageUrl) {
+      res.status(400).json({ error: 'Treść lub obraz komentarza jest wymagany' });
       return;
     }
 
     const comment = await prisma.comment.create({
       data: {
-        text: text.trim(),
+        text: text?.trim() || '',
         postId: req.params.id,
         authorId: req.session.userId!,
         parentId: parentId ?? null,
+        imageUrl: imageUrl ?? null,
       },
       include: {
         author: {
@@ -123,6 +126,7 @@ router.post('/posts/:id/comments', requireAuth, async (req, res) => {
       authorAvatarColor: comment.author.avatarColor,
       authorAvatarUrl: comment.author.avatarUrl ?? undefined,
       text: comment.text,
+      imageUrl: (comment as any).imageUrl ?? undefined,
       timeAgo: 'Teraz',
       timestamp: comment.createdAt.getTime(),
       likes: 0,

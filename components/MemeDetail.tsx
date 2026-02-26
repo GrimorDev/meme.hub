@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, ArrowLeft, Send, Flag, Download, MoreHorizontal, Lock, Edit3, X, Reply } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Heart, MessageCircle, Share2, ArrowLeft, Send, Flag, Download, MoreHorizontal, Lock, Edit3, X, Reply, ImagePlus, XCircle } from 'lucide-react';
 import { MemePost, User, Comment } from '../types';
 import { db } from '../services/db';
 import UserHoverCard from './UserHoverCard';
@@ -18,6 +18,9 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
   const [meme, setMeme] = useState(initialMeme);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [commentImage, setCommentImage] = useState<string | null>(null);
+  const [uploadingCommentImg, setUploadingCommentImg] = useState(false);
+  const commentImgRef = useRef<HTMLInputElement>(null);
   const [replyingTo, setReplyingTo] = useState<{ id: string, author: string } | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   
@@ -85,6 +88,17 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
     db.toggleCommentLike(commentId, user.id);
   };
 
+  const handleCommentImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingCommentImg(true);
+    try {
+      const url = await db.uploadFile(file);
+      setCommentImage(url);
+    } catch { /* ignoruj */ }
+    setUploadingCommentImg(false);
+  };
+
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -92,22 +106,24 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
       return;
     }
     const text = newComment.trim();
-    if (text) {
-      setNewComment('');
-      setReplyingTo(null);
-      setMeme(prev => ({ ...prev, commentsCount: prev.commentsCount + 1 }));
+    if (!text && !commentImage) return;
 
-      try {
-        const saved = await db.addComment({
-          postId: meme.id,
-          author: user.username,
-          text,
-          parentId: replyingTo?.id || null,
-        });
-        setComments(prev => [...prev, saved]);
-      } catch {
-        setMeme(prev => ({ ...prev, commentsCount: prev.commentsCount - 1 }));
-      }
+    setNewComment('');
+    setCommentImage(null);
+    setReplyingTo(null);
+    setMeme(prev => ({ ...prev, commentsCount: prev.commentsCount + 1 }));
+
+    try {
+      const saved = await db.addComment({
+        postId: meme.id,
+        author: user.username,
+        text: text || '',
+        parentId: replyingTo?.id || null,
+        imageUrl: commentImage || undefined,
+      });
+      setComments(prev => [...prev, saved]);
+    } catch {
+      setMeme(prev => ({ ...prev, commentsCount: prev.commentsCount - 1 }));
     }
   };
 
@@ -361,26 +377,53 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
                         <button onClick={() => setReplyingTo(null)} className="hover:text-white"><X size={12} /></button>
                     </div>
                 )}
-                <form onSubmit={handleCommentSubmit} className="relative">
-                  <input 
-                    type="text" 
+                {/* Podgląd obrazka do komentarza */}
+                {commentImage && (
+                  <div className="relative inline-block">
+                    <img src={commentImage} alt="Podgląd" className="h-24 rounded-xl object-cover border border-zinc-700" />
+                    <button
+                      type="button"
+                      onClick={() => setCommentImage(null)}
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-600 rounded-full flex items-center justify-center text-white hover:bg-red-500"
+                    >
+                      <XCircle size={12} />
+                    </button>
+                  </div>
+                )}
+                <form onSubmit={handleCommentSubmit} className="relative flex gap-2">
+                  <input
+                    type="text"
                     disabled={!user}
                     placeholder={user ? (replyingTo ? `Odpowiedz...` : "Skomentuj tego krosa...") : "Zaloguj się, aby komentować"}
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
-                    className={`w-full bg-zinc-950 border border-zinc-800 rounded-2xl pl-5 pr-14 py-4 text-sm focus:border-purple-500 outline-none transition-all font-medium ${!user ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`flex-1 bg-zinc-950 border border-zinc-800 rounded-2xl pl-5 pr-4 py-4 text-sm focus:border-purple-500 outline-none transition-all font-medium ${!user ? 'opacity-50 cursor-not-allowed' : ''}`}
                     autoFocus={!!replyingTo}
                   />
+                  {user && (
+                    <>
+                      <input ref={commentImgRef} type="file" accept="image/*" className="hidden" onChange={handleCommentImageUpload} />
+                      <button
+                        type="button"
+                        onClick={() => commentImgRef.current?.click()}
+                        disabled={uploadingCommentImg}
+                        className="w-12 h-12 self-center bg-zinc-800 hover:bg-zinc-700 rounded-xl flex items-center justify-center text-zinc-400 hover:text-purple-400 transition-all disabled:opacity-50 shrink-0"
+                        title="Dodaj obrazek"
+                      >
+                        <ImagePlus size={18} />
+                      </button>
+                    </>
+                  )}
                   {!user ? (
-                    <button 
+                    <button
                       type="button"
                       onClick={onAuthRequired}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 hover:text-white transition-all"
+                      className="w-12 h-12 self-center bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 hover:text-white transition-all shrink-0"
                     >
                       <Lock size={18} />
                     </button>
                   ) : (
-                    <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center text-white hover:bg-purple-500 transition-all active:scale-90 shadow-lg shadow-purple-600/20">
+                    <button type="submit" disabled={!newComment.trim() && !commentImage} className="w-12 h-12 self-center bg-purple-600 rounded-xl flex items-center justify-center text-white hover:bg-purple-500 disabled:opacity-40 transition-all active:scale-90 shadow-lg shadow-purple-600/20 shrink-0">
                       <Send size={18} />
                     </button>
                   )}
@@ -448,7 +491,16 @@ const CommentCard: React.FC<{
                     </UserHoverCard>
                     <button className="text-zinc-700 group-hover:text-zinc-500 transition-colors"><MoreHorizontal size={14} /></button>
                 </div>
-                <p className="text-sm text-zinc-400 font-medium leading-relaxed">{comment.text}</p>
+                {comment.text && <p className="text-sm text-zinc-400 font-medium leading-relaxed">{comment.text}</p>}
+                {comment.imageUrl && (
+                  <img
+                    src={comment.imageUrl}
+                    alt="komentarz"
+                    loading="lazy"
+                    className="max-h-48 rounded-xl object-cover border border-zinc-800 mt-1 cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => window.open(comment.imageUrl, '_blank')}
+                  />
+                )}
                 <div className="flex items-center gap-4 pt-1">
                     <button 
                         onClick={onLike}

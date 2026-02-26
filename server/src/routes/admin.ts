@@ -125,6 +125,18 @@ router.post('/users/:id/ban', requireAdmin, async (req, res) => {
       where: { id: req.params.id },
       data: { banned: !target.banned },
     });
+
+    // Zapisz historię bana
+    const { reason } = req.body as { reason?: string };
+    prisma.banHistory.create({
+      data: {
+        userId:  req.params.id,
+        adminId: req.session.userId!,
+        action:  updated.banned ? 'ban' : 'unban',
+        reason:  reason ?? null,
+      },
+    }).catch(console.error);
+
     res.json({ banned: updated.banned });
   } catch (err) {
     console.error(err);
@@ -299,6 +311,98 @@ router.put('/config', requireAdmin, async (req, res) => {
       },
     });
     res.json({ topMetric: config.topMetric, topPeriod: config.topPeriod });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// GET /api/admin/stats — statystyki platformy
+router.get('/stats', requireAdmin, async (_req, res) => {
+  try {
+    const now = new Date();
+    const d1  = new Date(now.getTime() - 1  * 86400000);
+    const d7  = new Date(now.getTime() - 7  * 86400000);
+    const d30 = new Date(now.getTime() - 30 * 86400000);
+
+    const [
+      totalUsers, newUsers7d, newUsers30d,
+      totalPosts, newPosts7d, newPosts1d,
+      totalComments, newComments7d,
+      totalLikes,
+      pendingPosts,
+      bannedUsers,
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({ where: { createdAt: { gte: d7 } } }),
+      prisma.user.count({ where: { createdAt: { gte: d30 } } }),
+      prisma.memePost.count(),
+      prisma.memePost.count({ where: { createdAt: { gte: d7 } } }),
+      prisma.memePost.count({ where: { createdAt: { gte: d1 } } }),
+      prisma.comment.count(),
+      prisma.comment.count({ where: { createdAt: { gte: d7 } } }),
+      prisma.postLike.count(),
+      prisma.memePost.count({ where: { featured: false } }),
+      prisma.user.count({ where: { banned: true } }),
+    ]);
+
+    // Rejestracje per dzień (ostatnie 14 dni)
+    const regRaw = await prisma.$queryRaw<{ day: Date; count: bigint }[]>`
+      SELECT DATE_TRUNC('day', "createdAt") AS day, COUNT(*) AS count
+      FROM users
+      WHERE "createdAt" >= NOW() - INTERVAL '14 days'
+      GROUP BY day ORDER BY day ASC
+    `;
+    const registrationsChart = regRaw.map(r => ({
+      day: r.day.toISOString().slice(0, 10),
+      count: Number(r.count),
+    }));
+
+    // Posty per dzień (ostatnie 14 dni)
+    const postRaw = await prisma.$queryRaw<{ day: Date; count: bigint }[]>`
+      SELECT DATE_TRUNC('day', "createdAt") AS day, COUNT(*) AS count
+      FROM meme_posts
+      WHERE "createdAt" >= NOW() - INTERVAL '14 days'
+      GROUP BY day ORDER BY day ASC
+    `;
+    const postsChart = postRaw.map(r => ({
+      day: r.day.toISOString().slice(0, 10),
+      count: Number(r.count),
+    }));
+
+    res.json({
+      totalUsers, newUsers7d, newUsers30d,
+      totalPosts, newPosts7d, newPosts1d,
+      totalComments, newComments7d,
+      totalLikes,
+      pendingPosts,
+      bannedUsers,
+      registrationsChart,
+      postsChart,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// GET /api/admin/ban-history/:userId — historia banów konkretnego usera
+router.get('/ban-history/:userId', requireAdmin, async (req, res) => {
+  try {
+    const history = await prisma.banHistory.findMany({
+      where: { userId: req.params.userId },
+      include: {
+        admin: { select: { username: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(history.map(h => ({
+      id: h.id,
+      action: h.action,
+      reason: h.reason,
+      createdAt: h.createdAt,
+      adminUsername: h.admin.username,
+    })));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Błąd serwera' });

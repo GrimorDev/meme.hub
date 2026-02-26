@@ -127,6 +127,7 @@ class ApiClient {
     tags: string[];
     timeAgo: string;
     description?: string;
+    isNsfw?: boolean;
   }): Promise<MemePost> {
     return request<MemePost>('/posts', {
       method: 'POST',
@@ -174,12 +175,14 @@ class ApiClient {
     author: string;
     text: string;
     parentId?: string | null;
+    imageUrl?: string;
   }): Promise<Comment> {
     return request<Comment>(`/posts/${comment.postId}/comments`, {
       method: 'POST',
       body: JSON.stringify({
         text: comment.text,
         parentId: comment.parentId,
+        imageUrl: comment.imageUrl,
       }),
     });
   }
@@ -373,6 +376,25 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ email, code, newPassword }),
     });
+  }
+
+  // ── Zapisane memy ─────────────────────────────────────────────
+  async getSavedPosts(): Promise<MemePost[]> {
+    try { return await request<MemePost[]>('/saved'); }
+    catch { return []; }
+  }
+
+  async toggleSaved(postId: string): Promise<{ saved: boolean }> {
+    return request<{ saved: boolean }>(`/saved/${postId}`, { method: 'POST' });
+  }
+
+  // ── Admin stats ───────────────────────────────────────────────
+  async adminGetStats(): Promise<import('../types').AdminStats> {
+    return request<import('../types').AdminStats>('/admin/stats');
+  }
+
+  async adminGetBanHistory(userId: string): Promise<{ id: string; action: string; reason: string | null; createdAt: string; adminUsername: string }[]> {
+    return request(`/admin/ban-history/${userId}`);
   }
 
   async uploadFile(file: File): Promise<string> {

@@ -14,6 +14,9 @@ import adminRoutes from './routes/admin.js';
 import templateRoutes from './routes/templates.js';
 import notificationsRoutes from './routes/notifications.js';
 import messagesRoutes from './routes/messages.js';
+import savedRoutes from './routes/saved.js';
+import ogRoutes from './routes/og.js';
+import { apiLimiter, writeLimiter, uploadLimiter, authLimiter } from './middleware/rateLimit.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -49,6 +52,14 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(sessionMiddleware);
 
+// ── Rate limiting ─────────────────────────────────────────────
+app.use('/api', apiLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/posts', writeLimiter);
+app.use('/api/upload', uploadLimiter);
+
 const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads');
 app.use('/uploads', express.static(UPLOADS_DIR));
 
@@ -78,6 +89,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/messages', messagesRoutes);
+app.use('/api/saved', savedRoutes);
+app.use('/og', ogRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });

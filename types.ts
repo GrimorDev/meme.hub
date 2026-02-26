@@ -196,7 +196,10 @@ export interface Comment {
   id: string;
   postId: string;
   author: string;
+  authorAvatarColor?: string;
+  authorAvatarUrl?: string;
   text: string;
+  imageUrl?: string;
   timeAgo: string;
   timestamp: number;
   likes: number;
@@ -221,6 +224,8 @@ export interface MemePost {
   description?: string;
   likedBy?: string[];
   featured?: boolean;
+  isNsfw?: boolean;
+  isSaved?: boolean;
 }
 
 export interface PaginatedPosts {
@@ -260,6 +265,22 @@ export interface Conversation {
   lastMessage: string;
   lastMessageAt: string;
   unreadCount: number;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  newUsers7d: number;
+  newUsers30d: number;
+  totalPosts: number;
+  newPosts7d: number;
+  newPosts1d: number;
+  totalComments: number;
+  newComments7d: number;
+  totalLikes: number;
+  pendingPosts: number;
+  bannedUsers: number;
+  registrationsChart: { day: string; count: number }[];
+  postsChart: { day: string; count: number }[];
 }
 
 export interface MemeTextBox {

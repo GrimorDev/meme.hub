@@ -1,8 +1,62 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, ArrowLeft, MessageSquare, Loader2, User as UserIcon } from 'lucide-react';
+import { Send, ArrowLeft, MessageSquare, Loader2, ExternalLink } from 'lucide-react';
 import { User, Conversation, DirectMessage } from '../types';
 import { db } from '../services/db';
+
+// ── Link Preview ──────────────────────────────────────────────
+const URL_REGEX = /https?:\/\/[^\s<>"]+/g;
+
+function extractUrl(text: string): string | null {
+  const m = text.match(URL_REGEX);
+  return m ? m[0] : null;
+}
+
+const LinkPreview: React.FC<{ url: string }> = ({ url }) => {
+  const [data, setData] = useState<{ title: string | null; description: string | null; image: string | null } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setData(null);
+    fetch(`/api/og/preview?url=${encodeURIComponent(url)}`)
+      .then(r => r.json())
+      .then(d => { if (!cancelled) { setData(d); setLoading(false); } })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [url]);
+
+  if (loading) return <div className="mt-2 h-14 bg-zinc-700/40 rounded-xl animate-pulse" />;
+  if (!data || (!data.title && !data.image)) return null;
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={e => e.stopPropagation()}
+      className="mt-2 flex gap-3 bg-zinc-700/60 hover:bg-zinc-700 rounded-xl overflow-hidden border border-zinc-600/40 transition-colors no-underline"
+    >
+      {data.image && (
+        <img
+          src={data.image}
+          alt=""
+          loading="lazy"
+          className="w-16 h-16 object-cover shrink-0"
+          onError={e => (e.currentTarget.style.display = 'none')}
+        />
+      )}
+      <div className="flex-1 p-2 min-w-0">
+        {data.title && <p className="text-xs font-bold text-white truncate">{data.title}</p>}
+        {data.description && <p className="text-[10px] text-zinc-400 line-clamp-2 mt-0.5">{data.description}</p>}
+        <p className="text-[9px] text-zinc-500 mt-1 flex items-center gap-1 truncate">
+          <ExternalLink size={9} /> {url.replace(/^https?:\/\//, '').split('/')[0]}
+        </p>
+      </div>
+    </a>
+  );
+};
 
 interface MessagesViewProps {
   currentUser: User;
@@ -240,7 +294,10 @@ const MessagesView: React.FC<MessagesViewProps> = ({ currentUser, initialUserId,
                         ? 'bg-purple-600 text-white rounded-br-sm'
                         : 'bg-zinc-800 text-zinc-100 rounded-bl-sm'
                     }`}>
-                      <p>{msg.text}</p>
+                      <p className="break-words">{msg.text}</p>
+                      {extractUrl(msg.text) && (
+                        <LinkPreview url={extractUrl(msg.text)!} />
+                      )}
                       <p className={`text-[10px] mt-1 ${isMe ? 'text-purple-200/70' : 'text-zinc-500'}`}>
                         {timeLabel(msg.createdAt)}
                       </p>

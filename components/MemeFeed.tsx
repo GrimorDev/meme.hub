@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, TrendingUp, Flame, Star, Twitter, Facebook, Link as LinkIcon, X, Trash2, Edit3, Flag, AlertTriangle, Check, Hash, Search, Sparkles, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, TrendingUp, Flame, Star, Twitter, Facebook, Link as LinkIcon, X, Trash2, Edit3, Flag, AlertTriangle, Check, Hash, Search, Sparkles, ChevronLeft, ChevronRight, Menu, Bookmark, EyeOff } from 'lucide-react';
 import { MemePost, User } from '../types';
 import { db } from '../services/db';
 import UserHoverCard from './UserHoverCard';
@@ -16,6 +16,7 @@ interface MemeFeedProps {
   onClearFilters?: () => void;
   onTagSelect: (tag: string) => void;
   hideLikeCounts?: boolean;
+  currentUser?: User | null;
   onNavigateToDownloads?: () => void;
 }
 
@@ -54,6 +55,11 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
 
   const handlePostChange = () => {
     setRefreshTrigger(prev => prev + 1);
+  };
+
+  const handleToggleSave = async (postId: string) => {
+    if (!user) return;
+    try { await db.toggleSaved(postId); } catch {}
   };
 
   const title = activeTag ? `Kategoria: ${activeTag}` : searchQuery ? `Wyniki dla: ${searchQuery}` : 'Centrala Mocy';
@@ -132,6 +138,7 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
             onPostChange={handlePostChange}
             onTagSelect={onTagSelect}
             hideLikeCounts={hideLikeCounts}
+            onToggleSave={handleToggleSave}
           />
         ))}
       </div>
@@ -201,7 +208,8 @@ const MemeCard: React.FC<{
     onPostChange: () => void;
     onTagSelect: (tag: string) => void;
     hideLikeCounts?: boolean;
-}> = ({ meme, onClick, user, onAuthRequired, onUserClick, onPostChange, onTagSelect, hideLikeCounts = false }) => {
+    onToggleSave?: (postId: string) => void;
+}> = ({ meme, onClick, user, onAuthRequired, onUserClick, onPostChange, onTagSelect, hideLikeCounts = false, onToggleSave }) => {
   const [isLiked, setIsLiked] = useState(user ? meme.likedBy?.includes(user.id) : false);
   const [likesCount, setLikesCount] = useState(meme.likes);
   const [showShareOptions, setShowShareOptions] = useState(false);
@@ -210,6 +218,8 @@ const MemeCard: React.FC<{
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [nsfwRevealed, setNsfwRevealed] = useState(false);
+  const [isSaved, setIsSaved] = useState(meme.isSaved ?? false);
 
   useEffect(() => {
     setIsLiked(user ? meme.likedBy?.includes(user.id) : false);
@@ -261,6 +271,13 @@ const MemeCard: React.FC<{
     await db.updatePost(meme.id, { caption: newCaption });
     setShowEditModal(false);
     onPostChange();
+  };
+
+  const handleSave = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) { onAuthRequired(); return; }
+    setIsSaved(prev => !prev);
+    onToggleSave?.(meme.id);
   };
 
   const isOwner = user?.username === meme.author;
@@ -344,8 +361,21 @@ const MemeCard: React.FC<{
           <img
             src={meme.url}
             alt={meme.caption}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            loading="lazy"
+            decoding="async"
+            className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${meme.isNsfw && !nsfwRevealed ? 'blur-2xl scale-110' : ''}`}
           />
+          {/* NSFW overlay */}
+          {meme.isNsfw && !nsfwRevealed && (
+            <div
+              className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 backdrop-blur-sm z-10 cursor-pointer"
+              onClick={(e) => { e.stopPropagation(); setNsfwRevealed(true); }}
+            >
+              <EyeOff size={32} className="text-red-400" />
+              <span className="text-xs font-black uppercase tracking-widest text-red-400">Treść dla dorosłych</span>
+              <span className="text-[10px] text-zinc-400 font-medium">Kliknij, aby wyświetlić</span>
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover/image:opacity-100 transition-opacity" />
           <div className="absolute inset-x-0 bottom-0 p-6 transform translate-y-2 group-hover/image:translate-y-0 transition-transform duration-500">
             <p className="text-lg text-white font-black leading-tight drop-shadow-2xl italic uppercase tracking-tighter">
@@ -387,22 +417,33 @@ const MemeCard: React.FC<{
             </button>
           </div>
 
-          <div className="relative">
-            <button
-              className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all ${showShareOptions ? 'bg-purple-600 text-white' : 'bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-purple-600'}`}
-              onClick={(e) => { e.stopPropagation(); setShowShareOptions(!showShareOptions); }}
-            >
-              {showShareOptions ? <X size={18} /> : <Share2 size={18} />}
-            </button>
-
-            {showShareOptions && (
-              <div className="absolute bottom-full right-0 mb-3 flex flex-row gap-2 p-2 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 z-30" onClick={(e) => e.stopPropagation()}>
-                <button onClick={(e) => handleShare('twitter', e)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#1DA1F2]/10 text-[#1DA1F2] hover:bg-[#1DA1F2] hover:text-white transition-all shadow-lg"><Twitter size={18} fill="currentColor" /></button>
-                <button onClick={(e) => handleShare('facebook', e)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2] hover:text-white transition-all shadow-lg"><Facebook size={18} fill="currentColor" /></button>
-                <button onClick={(e) => handleShare('reddit', e)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#FF4500]/10 text-[#FF4500] hover:bg-[#FF4500] hover:text-white transition-all shadow-lg font-black text-xs">R</button>
-                <button onClick={(e) => handleShare('copy', e)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-all shadow-lg"><LinkIcon size={18} /></button>
-              </div>
+          <div className="flex items-center gap-2">
+            {user && (
+              <button
+                onClick={handleSave}
+                className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all ${isSaved ? 'bg-amber-500/20 text-amber-400' : 'bg-zinc-800/50 text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10'}`}
+                title={isSaved ? 'Usuń z zapisanych' : 'Zapisz mema'}
+              >
+                <Bookmark size={18} className={isSaved ? 'fill-amber-400' : ''} />
+              </button>
             )}
+            <div className="relative">
+              <button
+                className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all ${showShareOptions ? 'bg-purple-600 text-white' : 'bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-purple-600'}`}
+                onClick={(e) => { e.stopPropagation(); setShowShareOptions(!showShareOptions); }}
+              >
+                {showShareOptions ? <X size={18} /> : <Share2 size={18} />}
+              </button>
+
+              {showShareOptions && (
+                <div className="absolute bottom-full right-0 mb-3 flex flex-row gap-2 p-2 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 z-30" onClick={(e) => e.stopPropagation()}>
+                  <button onClick={(e) => handleShare('twitter', e)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#1DA1F2]/10 text-[#1DA1F2] hover:bg-[#1DA1F2] hover:text-white transition-all shadow-lg"><Twitter size={18} fill="currentColor" /></button>
+                  <button onClick={(e) => handleShare('facebook', e)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2] hover:text-white transition-all shadow-lg"><Facebook size={18} fill="currentColor" /></button>
+                  <button onClick={(e) => handleShare('reddit', e)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#FF4500]/10 text-[#FF4500] hover:bg-[#FF4500] hover:text-white transition-all shadow-lg font-black text-xs">R</button>
+                  <button onClick={(e) => handleShare('copy', e)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-all shadow-lg"><LinkIcon size={18} /></button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
