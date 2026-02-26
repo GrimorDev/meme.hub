@@ -108,6 +108,11 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
     const text = newComment.trim();
     if (!text && !commentImage) return;
 
+    // Zapisz wartości PRZED wyzerowaniem stanu
+    const submitText    = text;
+    const submitImage   = commentImage;
+    const submitParent  = replyingTo?.id || null;
+
     setNewComment('');
     setCommentImage(null);
     setReplyingTo(null);
@@ -117,10 +122,11 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
       const saved = await db.addComment({
         postId: meme.id,
         author: user.username,
-        text: text || '',
-        parentId: replyingTo?.id || null,
-        imageUrl: commentImage || undefined,
+        text: submitText,
+        parentId: submitParent,
+        imageUrl: submitImage || undefined,
       });
+      // Dodaj optymistycznie — bez refreshData żeby nie było migania
       setComments(prev => [...prev, saved]);
     } catch {
       setMeme(prev => ({ ...prev, commentsCount: prev.commentsCount - 1 }));
@@ -454,6 +460,27 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
   );
 };
 
+// ── Lightbox ──────────────────────────────────────────────────
+const ImageLightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose }) => (
+  <div
+    className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-sm animate-in fade-in duration-200"
+    onClick={onClose}
+  >
+    <button
+      onClick={onClose}
+      className="absolute top-4 right-4 w-10 h-10 bg-zinc-800 hover:bg-zinc-700 rounded-full flex items-center justify-center text-white transition-colors z-10"
+    >
+      <X size={20} />
+    </button>
+    <img
+      src={src}
+      alt="podgląd"
+      className="max-w-[92vw] max-h-[90vh] rounded-2xl object-contain shadow-2xl"
+      onClick={e => e.stopPropagation()}
+    />
+  </div>
+);
+
 const CommentCard: React.FC<{
     comment: Comment & { authorAvatarColor?: string; authorAvatarUrl?: string };
     user: User | null;
@@ -462,6 +489,7 @@ const CommentCard: React.FC<{
     onReply: () => void;
 }> = ({ comment, user, onUserClick, onLike, onReply }) => {
     const isLiked = user && comment.likedBy?.includes(user.id);
+    const [lightboxSrc, setLightboxSrc] = React.useState<string | null>(null);
 
     return (
         <div className="flex gap-4 group">
@@ -493,13 +521,18 @@ const CommentCard: React.FC<{
                 </div>
                 {comment.text && <p className="text-sm text-zinc-400 font-medium leading-relaxed">{comment.text}</p>}
                 {comment.imageUrl && (
-                  <img
-                    src={comment.imageUrl}
-                    alt="komentarz"
-                    loading="lazy"
-                    className="max-h-48 rounded-xl object-cover border border-zinc-800 mt-1 cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => window.open(comment.imageUrl, '_blank')}
-                  />
+                  <>
+                    <img
+                      src={comment.imageUrl}
+                      alt="komentarz"
+                      loading="lazy"
+                      className="max-h-48 rounded-xl object-cover border border-zinc-800 mt-1 cursor-zoom-in hover:opacity-90 transition-opacity"
+                      onClick={e => { e.stopPropagation(); setLightboxSrc(comment.imageUrl!); }}
+                    />
+                    {lightboxSrc && (
+                      <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+                    )}
+                  </>
                 )}
                 <div className="flex items-center gap-4 pt-1">
                     <button 
