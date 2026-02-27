@@ -19,12 +19,10 @@ router.post('/', requireAuth, upload.single('file'), processImage, async (req, r
   const mediaType = (req.file as any).mediaType ?? 'image';
   const url       = `/uploads/${filename}`;
 
-  // Watermark tylko dla zdjęć postów (nie avatar/banner/komentarz/wiadomość)
+  // Watermark dla WSZYSTKICH mediów postów (obrazki, GIFy, video)
+  // — nie dla avatarów, bannerów, komentarzy, wiadomości
   // Frontend sygnalizuje ?type=post w query
-  const isPostUpload  = req.query.type === 'post';
-  const isStaticImage = mediaType === 'image' && !filename.endsWith('.gif');
-
-  if (isPostUpload && isStaticImage && req.session.userId) {
+  if (req.query.type === 'post' && req.session.userId) {
     const user = await prisma.user.findUnique({
       where:  { id: req.session.userId },
       select: { username: true },
