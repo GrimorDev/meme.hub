@@ -37,8 +37,9 @@ model User {
   reportsMade        UserReport[] @relation("UserReportReporter")
   templates          Template[]
   notifications      Notification[]
-  sentMessages       Message[]    @relation("SentMessages")
-  receivedMessages   Message[]    @relation("ReceivedMessages")
+  sentMessages       Message[]         @relation("SentMessages")
+  receivedMessages   Message[]         @relation("ReceivedMessages")
+  messageReactions   MessageReaction[]
   savedPosts         SavedPost[]
   banHistoryTarget   BanHistory[] @relation("BanHistoryTarget")
   banHistoryAdmin    BanHistory[] @relation("BanHistoryAdmin")
@@ -94,6 +95,7 @@ model MemePost {
   authorId    String
   featured    Boolean  @default(false)
   isNsfw      Boolean  @default(false)
+  mediaType   String   @default("image")
   createdAt   DateTime @default(now())
 
   author   User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -222,11 +224,27 @@ model Message {
   senderId   String
   receiverId String
   text       String
+  imageUrl   String?
   read       Boolean  @default(false)
   createdAt  DateTime @default(now())
 
-  sender   User @relation("SentMessages",     fields: [senderId],   references: [id], onDelete: Cascade)
-  receiver User @relation("ReceivedMessages",  fields: [receiverId], references: [id], onDelete: Cascade)
+  sender    User              @relation("SentMessages",    fields: [senderId],   references: [id], onDelete: Cascade)
+  receiver  User              @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  reactions MessageReaction[]
 
   @@map("messages")
+}
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId],    references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@map("message_reactions")
 }

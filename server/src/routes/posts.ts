@@ -40,6 +40,8 @@ router.get('/', async (req, res) => {
 
     const whereBase: any = {
       ...(isNowe ? { featured: false } : { featured: true }),
+      // Goście nie widzą postów NSFW
+      ...(!currentUserId ? { isNsfw: false } : {}),
       ...(sort === 'TOP' && topPeriod > 0
         ? { createdAt: { gte: new Date(Date.now() - topPeriod * 24 * 60 * 60 * 1000) } }
         : {}),
@@ -128,12 +130,14 @@ router.post('/', requireAuth, async (req, res) => {
       tags = [],
       description,
       isNsfw = false,
+      mediaType = 'image',
     } = req.body as {
       caption?: string;
       url?: string;
       tags?: string[];
       description?: string;
       isNsfw?: boolean;
+      mediaType?: string;
     };
 
     if (!url || !caption) {
@@ -162,6 +166,7 @@ router.post('/', requireAuth, async (req, res) => {
         authorId: req.session.userId!,
         featured: false,
         isNsfw: Boolean(isNsfw),
+        mediaType: mediaType === 'video' ? 'video' : 'image',
         tags: { create: tagUpserts },
       },
       include: POST_INCLUDE,

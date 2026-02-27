@@ -26,7 +26,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, cu
     const file = e.target.files?.[0];
     if (file) {
       try {
-        const url = await db.uploadFile(file);
+        const { url } = await db.uploadFile(file);
         setter(url);
       } catch {
         // fallback to base64 preview if upload fails

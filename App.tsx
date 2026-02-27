@@ -242,7 +242,7 @@ const App: React.FC = () => {
               <NavButton active={(view === 'FEED' || view === 'DETAIL') && !activeTag && !searchQuery} onClick={() => { setView('FEED'); setSelectedMeme(null); setActiveTag(null); setSearchQuery(''); window.history.pushState({}, '', '/'); }} icon={<LayoutGrid size={18} />} label="Feed" />
               <NavButton active={view === 'STUDIO'} onClick={() => protectedAction(() => { setView('STUDIO'); window.history.pushState({}, '', '/studio'); })} icon={<PenTool size={18} />} label="Studio" />
               <NavButton active={view === 'ROAST'} onClick={() => { setView('ROAST'); window.history.pushState({}, '', '/roast'); }} icon={<Flame size={18} />} label="Roast AI" />
-              {user?.role === 'admin' && (
+              {(user?.role === 'admin' || user?.role === 'moderator') && (
                 <button
                   onClick={() => { setView('ADMIN'); window.history.pushState({}, '', '/admin'); }}
                   className={`flex items-center gap-2 px-6 py-2 rounded-full transition-all duration-300 font-bold text-sm tracking-tight ${
@@ -317,10 +317,10 @@ const App: React.FC = () => {
             {user ? (
               <div className="flex items-center gap-3">
                 <div className="hidden lg:flex flex-col items-end">
-                  {user.role === 'admin' ? (
+                  {user.role === 'admin' || user.role === 'moderator' ? (
                     <span
                       onClick={() => handleUserSelect(user.username)}
-                      className="text-xs font-black uppercase bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent cursor-pointer"
+                      className={`text-xs font-black uppercase bg-gradient-to-r ${user.role === 'admin' ? 'from-purple-500 to-pink-500' : 'from-blue-400 to-cyan-400'} bg-clip-text text-transparent cursor-pointer`}
                     >
                       @{user.username}
                     </span>
@@ -404,12 +404,12 @@ const App: React.FC = () => {
               accent
             />
           )}
-          {user?.role === 'admin' && (
+          {(user?.role === 'admin' || user?.role === 'moderator') && (
             <MobileNavBtn
               active={view === 'ADMIN'}
               onClick={() => { setView('ADMIN'); window.history.pushState({}, '', '/admin'); }}
               icon={<Shield size={22} />}
-              label="Admin"
+              label={user.role === 'moderator' ? 'Mod' : 'Admin'}
               danger
             />
           )}
@@ -489,8 +489,8 @@ const App: React.FC = () => {
             onStartDm={(userId) => handleNavigateToMessages(userId)}
           />
         )}
-        {view === 'ADMIN' && user?.role === 'admin' && (
-          <AdminPanel />
+        {view === 'ADMIN' && (user?.role === 'admin' || user?.role === 'moderator') && (
+          <AdminPanel currentUserRole={user.role} />
         )}
         {view === 'SETTINGS' && user && (
           <SettingsPage

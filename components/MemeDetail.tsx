@@ -93,7 +93,7 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
     if (!file) return;
     setUploadingCommentImg(true);
     try {
-      const url = await db.uploadFile(file);
+      const { url } = await db.uploadFile(file);
       setCommentImage(url);
     } catch { /* ignoruj */ }
     setUploadingCommentImg(false);
@@ -233,11 +233,22 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
         <div className="lg:col-span-8 xl:col-span-9 space-y-6">
           <div className="relative bg-zinc-950 rounded-[3rem] overflow-hidden border border-zinc-800 shadow-2xl group">
              <div className="absolute inset-0 bg-gradient-to-tr from-purple-600/10 to-transparent pointer-events-none" />
-             <img 
-               src={meme.url} 
-               alt={meme.caption} 
-               className="w-full object-contain max-h-[700px] xl:max-h-[850px] mx-auto"
-             />
+             {meme.mediaType === 'video' ? (
+               <video
+                 src={meme.url}
+                 className="w-full max-h-[700px] xl:max-h-[850px] mx-auto"
+                 controls
+                 muted
+                 loop
+                 playsInline
+               />
+             ) : (
+               <img
+                 src={meme.url}
+                 alt={meme.caption}
+                 className="w-full object-contain max-h-[700px] xl:max-h-[850px] mx-auto"
+               />
+             )}
              
              {/* Action Overlay Mobile Only */}
              <div className="lg:hidden absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/90 to-transparent">

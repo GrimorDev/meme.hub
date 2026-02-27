@@ -5,7 +5,7 @@ import { formatPost } from '../utils.js';
 
 const router = Router();
 
-// Middleware — tylko admin
+// Middleware — tylko admin (superadmin)
 const requireAdmin = async (req: any, res: any, next: any) => {
   if (!req.session.userId) {
     res.status(401).json({ error: 'Nie zalogowano' });
@@ -16,6 +16,22 @@ const requireAdmin = async (req: any, res: any, next: any) => {
     res.status(403).json({ error: 'Brak uprawnień administratora' });
     return;
   }
+  (req as any).currentUser = user;
+  next();
+};
+
+// Middleware — admin lub moderator
+const requireStaff = async (req: any, res: any, next: any) => {
+  if (!req.session.userId) {
+    res.status(401).json({ error: 'Nie zalogowano' });
+    return;
+  }
+  const user = await prisma.user.findUnique({ where: { id: req.session.userId } });
+  if (!user || (user.role !== 'admin' && user.role !== 'moderator')) {
+    res.status(403).json({ error: 'Brak uprawnień' });
+    return;
+  }
+  (req as any).currentUser = user;
   next();
 };
 
@@ -27,7 +43,7 @@ const POST_INCLUDE = {
 } as const;
 
 // GET /api/admin/posts — wszystkie posty z raportami
-router.get('/posts', requireAdmin, async (req, res) => {
+router.get('/posts', requireStaff, async (req, res) => {
   try {
     const posts = await prisma.memePost.findMany({
       include: {
@@ -49,7 +65,7 @@ router.get('/posts', requireAdmin, async (req, res) => {
 });
 
 // GET /api/admin/reports — posty ze zgłoszeniami
-router.get('/reports', requireAdmin, async (req, res) => {
+router.get('/reports', requireStaff, async (req, res) => {
   try {
     const reports = await prisma.report.findMany({
       include: {
@@ -76,7 +92,7 @@ router.get('/reports', requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/admin/posts/:id — usuń post
-router.delete('/posts/:id', requireAdmin, async (req, res) => {
+router.delete('/posts/:id', requireStaff, async (req, res) => {
   try {
     await prisma.memePost.delete({ where: { id: req.params.id } });
     res.json({ ok: true });
@@ -87,7 +103,7 @@ router.delete('/posts/:id', requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/admin/reports/:id — usuń zgłoszenie
-router.delete('/reports/:id', requireAdmin, async (req, res) => {
+router.delete('/reports/:id', requireStaff, async (req, res) => {
   try {
     await prisma.report.delete({ where: { id: req.params.id } });
     res.json({ ok: true });
@@ -98,7 +114,7 @@ router.delete('/reports/:id', requireAdmin, async (req, res) => {
 });
 
 // GET /api/admin/users — lista użytkowników
-router.get('/users', requireAdmin, async (req, res) => {
+router.get('/users', requireStaff, async (req, res) => {
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -116,11 +132,16 @@ router.get('/users', requireAdmin, async (req, res) => {
 });
 
 // POST /api/admin/users/:id/ban — zbanuj / odbanuj
-router.post('/users/:id/ban', requireAdmin, async (req, res) => {
+router.post('/users/:id/ban', requireStaff, async (req, res) => {
   try {
+    const executor = (req as any).currentUser;
     const target = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!target) { res.status(404).json({ error: 'Nie znaleziono użytkownika' }); return; }
+    // Admin nie może być zbanowany przez nikogo; moderator nie może banować adminów ani moderatorów
     if (target.role === 'admin') { res.status(403).json({ error: 'Nie można zbanować admina' }); return; }
+    if (executor.role === 'moderator' && target.role === 'moderator') {
+      res.status(403).json({ error: 'Moderator nie może banować innego moderatora' }); return;
+    }
     const updated = await prisma.user.update({
       where: { id: req.params.id },
       data: { banned: !target.banned },
@@ -183,8 +204,8 @@ router.post('/user-reports', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/admin/user-reports — lista zgłoszeń profili (admin)
-router.get('/user-reports', requireAdmin, async (req, res) => {
+// GET /api/admin/user-reports — lista zgłoszeń profili
+router.get('/user-reports', requireStaff, async (req, res) => {
   try {
     const reports = await prisma.userReport.findMany({
       include: {
@@ -206,8 +227,8 @@ router.get('/user-reports', requireAdmin, async (req, res) => {
   }
 });
 
-// DELETE /api/admin/user-reports/:id — odrzuć zgłoszenie profilu (admin)
-router.delete('/user-reports/:id', requireAdmin, async (req, res) => {
+// DELETE /api/admin/user-reports/:id — odrzuć zgłoszenie profilu
+router.delete('/user-reports/:id', requireStaff, async (req, res) => {
   try {
     await prisma.userReport.delete({ where: { id: req.params.id } });
     res.json({ ok: true });
@@ -218,7 +239,7 @@ router.delete('/user-reports/:id', requireAdmin, async (req, res) => {
 });
 
 // POST /api/admin/posts/:id/feature — promuj / cofnij post z kolejki
-router.post('/posts/:id/feature', requireAdmin, async (req, res) => {
+router.post('/posts/:id/feature', requireStaff, async (req, res) => {
   try {
     const post = await prisma.memePost.findUnique({ where: { id: req.params.id } });
     if (!post) { res.status(404).json({ error: 'Nie znaleziono posta' }); return; }
@@ -247,11 +268,11 @@ router.post('/posts/:id/feature', requireAdmin, async (req, res) => {
   }
 });
 
-// POST /api/admin/users/:id/role — zmień rolę użytkownika (admin)
+// POST /api/admin/users/:id/role — zmień rolę użytkownika (tylko admin)
 router.post('/users/:id/role', requireAdmin, async (req, res) => {
   try {
     const { role } = req.body as { role?: string };
-    if (!role || !['user', 'admin'].includes(role)) {
+    if (!role || !['user', 'moderator', 'admin'].includes(role)) {
       res.status(400).json({ error: 'Nieprawidłowa rola' });
       return;
     }
@@ -407,6 +428,65 @@ router.get('/ban-history/:userId', requireAdmin, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Błąd serwera' });
   }
+});
+
+// GET /api/admin/chat-search — historia czatu 2 użytkowników (tylko admin)
+// ?user1=username&user2=username
+router.get('/chat-search', requireAdmin, async (req, res) => {
+  try {
+    const { user1, user2 } = req.query as { user1?: string; user2?: string };
+    if (!user1 || !user2) {
+      res.status(400).json({ error: 'Podaj obu użytkowników (user1, user2)' }); return;
+    }
+
+    const [u1, u2] = await Promise.all([
+      prisma.user.findUnique({ where: { username: user1 }, select: { id: true, username: true, avatarColor: true, avatarUrl: true } }),
+      prisma.user.findUnique({ where: { username: user2 }, select: { id: true, username: true, avatarColor: true, avatarUrl: true } }),
+    ]);
+
+    if (!u1) { res.status(404).json({ error: `Nie znaleziono użytkownika "${user1}"` }); return; }
+    if (!u2) { res.status(404).json({ error: `Nie znaleziono użytkownika "${user2}"` }); return; }
+
+    const messages = await prisma.message.findMany({
+      where: {
+        OR: [
+          { senderId: u1.id, receiverId: u2.id },
+          { senderId: u2.id, receiverId: u1.id },
+        ],
+      },
+      include: {
+        sender: { select: { id: true, username: true, avatarColor: true, avatarUrl: true } },
+        reactions: { select: { id: true, emoji: true, userId: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    res.json({
+      user1: u1,
+      user2: u2,
+      messages: messages.map(m => ({
+        id:               m.id,
+        senderId:         m.senderId,
+        receiverId:       m.receiverId,
+        senderUsername:   m.sender.username,
+        senderAvatarColor: m.sender.avatarColor,
+        senderAvatarUrl:  m.sender.avatarUrl ?? undefined,
+        text:             m.text,
+        imageUrl:         (m as any).imageUrl ?? undefined,
+        read:             m.read,
+        createdAt:        m.createdAt.toISOString(),
+        reactions:        m.reactions.map(r => ({ id: r.id, emoji: r.emoji, userId: r.userId })),
+      })),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// GET /api/admin/me — rola zalogowanego staffu
+router.get('/me', requireStaff, async (req, res) => {
+  res.json({ role: (req as any).currentUser.role });
 });
 
 export default router;

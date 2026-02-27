@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Shield, Trash2, Ban, Flag, Users, Image, AlertTriangle, Check, X, RefreshCw, UserCheck, UserX, Sparkles, Settings, Save, BarChart2, Clock } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Shield, Trash2, Ban, Flag, Users, Image, AlertTriangle, Check, X, RefreshCw, UserCheck, UserX, Sparkles, Settings, Save, BarChart2, Clock, MessageSquare, Search } from 'lucide-react';
 import { db } from '../services/db';
-import { AdminUser, AdminReport, AdminUserReport, MemePost, AdminStats } from '../types';
+import { AdminUser, AdminReport, AdminUserReport, MemePost, AdminStats, DirectMessage } from '../types';
 
-type Tab = 'reports' | 'user-reports' | 'posts' | 'users' | 'settings' | 'stats';
+type Tab = 'reports' | 'user-reports' | 'posts' | 'users' | 'settings' | 'stats' | 'chat';
 
-const AdminPanel: React.FC = () => {
+const AdminPanel: React.FC<{ currentUserRole?: string }> = ({ currentUserRole = 'admin' }) => {
   const [tab, setTab] = useState<Tab>('reports');
   const [reports, setReports] = useState<AdminReport[]>([]);
   const [userReports, setUserReports] = useState<AdminUserReport[]>([]);
@@ -19,6 +19,18 @@ const AdminPanel: React.FC = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [banHistory, setBanHistory] = useState<{ id: string; action: string; reason: string | null; createdAt: string; adminUsername: string }[]>([]);
   const [banHistoryUser, setBanHistoryUser] = useState<{ id: string; username: string } | null>(null);
+  // Chat search (tylko admin)
+  const [chatUser1, setChatUser1] = useState('');
+  const [chatUser2, setChatUser2] = useState('');
+  const [chatResult, setChatResult] = useState<{
+    user1: { id: string; username: string; avatarColor: string; avatarUrl?: string };
+    user2: { id: string; username: string; avatarColor: string; avatarUrl?: string };
+    messages: DirectMessage[];
+  } | null>(null);
+  const [chatSearching, setChatSearching] = useState(false);
+  const [chatError, setChatError] = useState('');
+
+  const isAdmin = currentUserRole === 'admin';
 
   const loadData = async () => {
     setLoading(true);
@@ -29,8 +41,22 @@ const AdminPanel: React.FC = () => {
       else if (tab === 'users') setUsers(await db.adminGetUsers());
       else if (tab === 'settings') setTopConfig(await db.getTopConfig());
       else if (tab === 'stats') setStats(await db.adminGetStats());
+      else if (tab === 'chat') { /* ładowanie przy wyszukaniu */ }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChatSearch = async () => {
+    if (!chatUser1.trim() || !chatUser2.trim()) { setChatError('Podaj obu użytkowników'); return; }
+    setChatSearching(true); setChatError(''); setChatResult(null);
+    try {
+      const result = await db.adminChatSearch(chatUser1.trim(), chatUser2.trim());
+      setChatResult(result);
+    } catch (err: any) {
+      setChatError(err.message || 'Nie znaleziono użytkowników');
+    } finally {
+      setChatSearching(false);
     }
   };
 
@@ -84,12 +110,14 @@ const AdminPanel: React.FC = () => {
     });
 
   const handleSetRole = (id: string, username: string, currentRole: string) => {
-    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    // Cycle: user → moderator → admin → user
+    const nextRole = currentRole === 'admin' ? 'user' : currentRole === 'moderator' ? 'admin' : 'moderator';
+    const roleLabel: Record<string, string> = { user: 'Użytkownik', moderator: 'Moderator', admin: 'Admin' };
     confirm(
-      `${newRole === 'admin' ? 'Nadać' : 'Odebrać'} rolę admina użytkownikowi @${username}?`,
+      `Zmienić rolę @${username} na ${roleLabel[nextRole]}?`,
       async () => {
-        const result = await db.adminSetRole(id, newRole as 'user' | 'admin');
-        setUsers(prev => prev.map(u => u.id === id ? { ...u, role: result.role } : u));
+        const result = await db.adminSetRole(id, nextRole as 'user' | 'moderator' | 'admin');
+        setUsers(prev => prev.map(u => u.id === id ? { ...u, role: result.role as any } : u));
         setUserReports(prev => prev.map(r =>
           r.targetUser.id === id ? { ...r, targetUser: { ...r.targetUser, role: result.role } } : r
         ));
@@ -156,8 +184,9 @@ const AdminPanel: React.FC = () => {
         <TabBtn t="user-reports" icon={<Users size={16} />} label="Zgłoszenia profili" count={userReports.length} />
         <TabBtn t="posts" icon={<Image size={16} />} label="Memy" />
         <TabBtn t="users" icon={<Users size={16} />} label="Użytkownicy" />
-        <TabBtn t="settings" icon={<Settings size={16} />} label="Ustawienia TOP" />
-        <TabBtn t="stats" icon={<BarChart2 size={16} />} label="Statystyki" />
+        {isAdmin && <TabBtn t="settings" icon={<Settings size={16} />} label="Ustawienia TOP" />}
+        {isAdmin && <TabBtn t="stats" icon={<BarChart2 size={16} />} label="Statystyki" />}
+        {isAdmin && <TabBtn t="chat" icon={<MessageSquare size={16} />} label="Czat" />}
       </div>
 
       {/* Content */}
@@ -329,12 +358,19 @@ const AdminPanel: React.FC = () => {
                     <div className="flex items-center gap-2 flex-wrap">
                       {u.role === 'admin' ? (
                         <span className="font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">@{u.username}</span>
+                      ) : u.role === 'moderator' ? (
+                        <span className="font-black bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">@{u.username}</span>
                       ) : (
                         <span className="font-black text-white">@{u.username}</span>
                       )}
                       {u.role === 'admin' && (
                         <span className="text-[10px] font-black bg-gradient-to-r from-purple-600 to-pink-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
                           <Shield size={9} fill="currentColor" /> ADMIN
+                        </span>
+                      )}
+                      {u.role === 'moderator' && (
+                        <span className="text-[10px] font-black bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Shield size={9} /> MOD
                         </span>
                       )}
                       {u.banned && (
@@ -352,19 +388,23 @@ const AdminPanel: React.FC = () => {
                     >
                       <Clock size={12} /> Historia
                     </button>
-                    {/* Zmień rolę */}
-                    <button
-                      onClick={() => handleSetRole(u.id, u.username, u.role)}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold text-xs transition-all border ${
-                        u.role === 'admin'
-                          ? 'bg-purple-900/20 hover:bg-zinc-700 text-purple-400 hover:text-white border-purple-900/30 hover:border-zinc-600'
-                          : 'bg-zinc-800/50 hover:bg-purple-700 text-zinc-400 hover:text-white border-zinc-700 hover:border-purple-600'
-                      }`}
-                      title={u.role === 'admin' ? 'Odbierz rolę admina' : 'Nadaj rolę admina'}
-                    >
-                      {u.role === 'admin' ? <UserX size={12} /> : <UserCheck size={12} />}
-                      {u.role === 'admin' ? 'Odbierz admina' : 'Nadaj admina'}
-                    </button>
+                    {/* Zmień rolę — tylko admin może to robić */}
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleSetRole(u.id, u.username, u.role)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold text-xs transition-all border ${
+                          u.role === 'admin'
+                            ? 'bg-purple-900/20 hover:bg-zinc-700 text-purple-400 hover:text-white border-purple-900/30 hover:border-zinc-600'
+                            : u.role === 'moderator'
+                            ? 'bg-blue-900/20 hover:bg-purple-700 text-blue-400 hover:text-white border-blue-900/30 hover:border-purple-600'
+                            : 'bg-zinc-800/50 hover:bg-blue-700 text-zinc-400 hover:text-white border-zinc-700 hover:border-blue-600'
+                        }`}
+                        title={`Zmień rolę @${u.username}`}
+                      >
+                        {u.role === 'admin' ? <UserX size={12} /> : <UserCheck size={12} />}
+                        {u.role === 'admin' ? '→ user' : u.role === 'moderator' ? '→ admin' : '→ mod'}
+                      </button>
+                    )}
                     {/* Ban */}
                     {u.role !== 'admin' && (
                       <button
@@ -384,8 +424,8 @@ const AdminPanel: React.FC = () => {
             </div>
           )}
 
-          {/* STATS TAB — statystyki platformy */}
-          {tab === 'stats' && (
+          {/* STATS TAB — statystyki platformy (tylko admin) */}
+          {tab === 'stats' && isAdmin && (
             <div className="space-y-8">
               {!stats ? (
                 <div className="py-16 text-center text-zinc-600 bg-zinc-900/30 rounded-3xl border border-zinc-800">
@@ -470,8 +510,78 @@ const AdminPanel: React.FC = () => {
             </div>
           )}
 
+          {/* CHAT TAB — wyszukiwanie czatu (tylko admin) */}
+          {tab === 'chat' && isAdmin && (
+            <div className="space-y-6">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-4">
+                <h3 className="text-sm font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                  <MessageSquare size={16} /> Wyszukaj rozmowę między użytkownikami
+                </h3>
+                <div className="flex gap-3 flex-wrap">
+                  <input
+                    value={chatUser1}
+                    onChange={e => setChatUser1(e.target.value)}
+                    placeholder="Użytkownik 1"
+                    className="flex-1 min-w-[140px] bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-red-500 transition-colors"
+                  />
+                  <input
+                    value={chatUser2}
+                    onChange={e => setChatUser2(e.target.value)}
+                    placeholder="Użytkownik 2"
+                    onKeyDown={e => { if (e.key === 'Enter') handleChatSearch(); }}
+                    className="flex-1 min-w-[140px] bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-red-500 transition-colors"
+                  />
+                  <button
+                    onClick={handleChatSearch}
+                    disabled={chatSearching}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl font-bold text-sm transition-all"
+                  >
+                    <Search size={16} /> {chatSearching ? 'Szukam...' : 'Szukaj'}
+                  </button>
+                </div>
+                {chatError && <p className="text-red-400 text-sm font-bold">{chatError}</p>}
+              </div>
+
+              {chatResult && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 text-sm font-bold text-zinc-400">
+                    <span className="text-white">@{chatResult.user1.username}</span>
+                    <span>↔</span>
+                    <span className="text-white">@{chatResult.user2.username}</span>
+                    <span className="text-zinc-600">({chatResult.messages.length} wiadomości)</span>
+                  </div>
+                  <div className="space-y-3 max-h-[60vh] overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                    {chatResult.messages.length === 0 ? (
+                      <div className="py-10 text-center text-zinc-600">
+                        <MessageSquare size={32} className="mx-auto mb-2 opacity-30" />
+                        <p className="font-bold text-sm">Brak wiadomości między tymi użytkownikami</p>
+                      </div>
+                    ) : chatResult.messages.map(msg => {
+                      const isFrom1 = msg.senderId === chatResult.user1.id;
+                      const sender  = isFrom1 ? chatResult.user1 : chatResult.user2;
+                      return (
+                        <div key={msg.id} className={`flex gap-3 ${isFrom1 ? '' : 'flex-row-reverse'}`}>
+                          <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${sender.avatarColor} overflow-hidden shrink-0 flex items-center justify-center text-white font-black text-xs`}>
+                            {sender.avatarUrl ? <img src={sender.avatarUrl} alt={sender.username} className="w-full h-full object-cover" /> : sender.username[0].toUpperCase()}
+                          </div>
+                          <div className={`max-w-[75%] space-y-1 ${isFrom1 ? '' : 'items-end flex flex-col'}`}>
+                            <div className={`px-3 py-2 rounded-2xl text-sm ${isFrom1 ? 'bg-zinc-700 text-white rounded-bl-sm' : 'bg-blue-600/30 text-blue-100 rounded-br-sm'}`}>
+                              {msg.text && <p className="break-words">{msg.text}</p>}
+                              {msg.imageUrl && <img src={msg.imageUrl} alt="Zdjęcie" className="mt-1 max-w-[200px] rounded-lg" />}
+                            </div>
+                            <p className="text-[9px] text-zinc-600">{new Date(msg.createdAt).toLocaleString('pl-PL')}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* SETTINGS TAB — ustawienia zakładki TOP */}
-          {tab === 'settings' && (
+          {tab === 'settings' && isAdmin && (
             <div className="max-w-xl space-y-8">
               <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 space-y-8">
 

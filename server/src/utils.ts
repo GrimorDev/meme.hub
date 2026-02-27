@@ -30,6 +30,7 @@ export function formatPost(post: any, currentUserId?: string) {
     likedBy: post.likes.map((l: any) => l.userId),
     featured: post.featured ?? false,
     isNsfw: post.isNsfw ?? false,
+    mediaType: post.mediaType ?? 'image',
   };
 }
 

@@ -1,5 +1,5 @@
 
-export type AppView = 'FEED' | 'STUDIO' | 'ROAST' | 'DETAIL' | 'PROFILE' | 'ADMIN' | 'DOWNLOADS' | 'MESSAGES' | 'SETTINGS';
+export type AppView = 'FEED' | 'STUDIO' | 'ROAST' | 'DETAIL' | 'PROFILE' | 'ADMIN' | 'DOWNLOADS' | 'MESSAGES' | 'SETTINGS' | 'SAVED';
 
 export type SliderMode = 'SIMPLE' | 'RUNNER' | 'GRAVITY' | 'MATH' | 'VOICE' | 'DICE' | 'SHAKE';
 
@@ -35,7 +35,7 @@ export interface User {
   settings?: UserSettings;
   createdAt?: string;
   usernameChangedAt?: string | null;
-  role?: 'user' | 'admin';
+  role?: 'user' | 'moderator' | 'admin';
   banned?: boolean;
 }
 
@@ -43,7 +43,7 @@ export interface AdminUser {
   id: string;
   username: string;
   email: string;
-  role: string;
+  role: 'user' | 'moderator' | 'admin';
   banned: boolean;
   avatarColor: string;
   avatarUrl?: string;
@@ -190,6 +190,13 @@ export const MEME_CATEGORIES: MemeCategoryType[] = [
       { id: 'random-inne', label: 'Inne' },
     ],
   },
+  {
+    id: 'nsfw', label: 'NSFW', emoji: '🔞',
+    subcategories: [
+      { id: 'nsfw-humor', label: 'Humor dla dorosłych' },
+      { id: 'nsfw-inne', label: 'Inne' },
+    ],
+  },
 ];
 
 export interface Comment {
@@ -226,6 +233,7 @@ export interface MemePost {
   featured?: boolean;
   isNsfw?: boolean;
   isSaved?: boolean;
+  mediaType?: 'image' | 'video';
 }
 
 export interface PaginatedPosts {
@@ -245,6 +253,12 @@ export interface AppNotification {
   createdAt: string;
 }
 
+export interface MessageReaction {
+  id: string;
+  emoji: string;
+  userId: string;
+}
+
 export interface DirectMessage {
   id: string;
   senderId: string;
@@ -253,8 +267,10 @@ export interface DirectMessage {
   senderAvatarColor: string;
   senderAvatarUrl?: string;
   text: string;
+  imageUrl?: string;
   read: boolean;
   createdAt: string;
+  reactions?: MessageReaction[];
 }
 
 export interface Conversation {

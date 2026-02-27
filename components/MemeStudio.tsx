@@ -203,7 +203,7 @@ const MemeStudio: React.FC<Props> = ({ user }) => {
     if (!newTemplateFile || !newTemplateName.trim() || !user) return;
     setIsUploadingTemplate(true);
     try {
-      const url = await db.uploadFile(newTemplateFile);
+      const { url } = await db.uploadFile(newTemplateFile);
       const created = await db.addTemplate(newTemplateName.trim(), url, newTemplatePublic);
       if (newTemplatePublic) {
         setCommunityTemplates(prev => [created, ...prev]);

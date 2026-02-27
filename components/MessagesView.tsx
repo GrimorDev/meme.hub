@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, ArrowLeft, MessageSquare, Loader2, ExternalLink } from 'lucide-react';
+import { Send, ArrowLeft, MessageSquare, Loader2, ExternalLink, ImagePlus, X as XIcon } from 'lucide-react';
 import { User, Conversation, DirectMessage } from '../types';
 import { db } from '../services/db';
 
@@ -90,13 +90,16 @@ const MessagesView: React.FC<MessagesViewProps> = ({ currentUser, initialUserId,
   const [selectedUser, setSelectedUser] = useState<{ userId: string; username: string; avatarColor: string; avatarUrl?: string } | null>(null);
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [text, setText] = useState('');
+  const [msgImage, setMsgImage] = useState<string | null>(null); // URL po uploadzie
   const [sending, setSending] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [showThread, setShowThread] = useState(!!initialUserId);
+  const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const imgInputRef = useRef<HTMLInputElement>(null);
 
   // Załaduj rozmowy
   useEffect(() => {
@@ -157,24 +160,48 @@ const MessagesView: React.FC<MessagesViewProps> = ({ currentUser, initialUserId,
     setShowThread(true);
   };
 
-  const handleSend = async () => {
-    if (!text.trim() || !selectedUserId || sending) return;
-    setSending(true);
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     try {
-      const msg = await db.sendMessage(selectedUserId, text.trim());
+      const { url } = await db.uploadFile(file);
+      setMsgImage(url);
+    } catch {}
+  };
+
+  const handleToggleReaction = async (messageId: string, emoji: string) => {
+    if (!selectedUserId) return;
+    try {
+      await db.toggleMessageReaction(selectedUserId, messageId, emoji);
+      // Odśwież wiadomości
+      const fresh = await db.getMessages(selectedUserId);
+      setMessages(fresh);
+    } catch {}
+    setReactionPickerMsgId(null);
+  };
+
+  const handleSend = async () => {
+    if ((!text.trim() && !msgImage) || !selectedUserId || sending) return;
+    setSending(true);
+    const submitText  = text.trim();
+    const submitImage = msgImage;
+    setText('');
+    setMsgImage(null);
+    try {
+      const msg = await db.sendMessage(selectedUserId, submitText, submitImage ?? undefined);
       setMessages(prev => [...prev, msg]);
-      setText('');
 
       // Aktualizuj listę rozmów
+      const convPreview = submitImage && !submitText ? '📷 Zdjęcie' : msg.text;
       setConversations(prev => {
         const exists = prev.find(c => c.userId === selectedUserId);
         if (exists) {
           return prev.map(c => c.userId === selectedUserId
-            ? { ...c, lastMessage: msg.text, lastMessageAt: msg.createdAt }
+            ? { ...c, lastMessage: convPreview, lastMessageAt: msg.createdAt }
             : c
           );
         } else if (selectedUser) {
-          return [{ ...selectedUser, lastMessage: msg.text, lastMessageAt: msg.createdAt, unreadCount: 0 }, ...prev];
+          return [{ ...selectedUser, lastMessage: convPreview, lastMessageAt: msg.createdAt, unreadCount: 0 }, ...prev];
         }
         return prev;
       });
@@ -284,23 +311,79 @@ const MessagesView: React.FC<MessagesViewProps> = ({ currentUser, initialUserId,
             ) : (
               messages.map(msg => {
                 const isMe = msg.senderId === currentUser.id;
+                const reactions = msg.reactions ?? [];
+                // Grupuj reakcje
+                const reactionGroups: Record<string, { count: number; mine: boolean }> = {};
+                for (const r of reactions) {
+                  if (!reactionGroups[r.emoji]) reactionGroups[r.emoji] = { count: 0, mine: false };
+                  reactionGroups[r.emoji].count++;
+                  if (r.userId === currentUser.id) reactionGroups[r.emoji].mine = true;
+                }
+                const EMOJI_LIST = ['👍','❤️','😂','😮','😢','🔥'];
                 return (
-                  <div key={msg.id} className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div key={msg.id} className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'} group/msg`}>
                     {!isMe && selectedUser && (
                       <Avatar username={msg.senderUsername} avatarColor={msg.senderAvatarColor} avatarUrl={msg.senderAvatarUrl} size={7} />
                     )}
-                    <div className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                      isMe
-                        ? 'bg-purple-600 text-white rounded-br-sm'
-                        : 'bg-zinc-800 text-zinc-100 rounded-bl-sm'
-                    }`}>
-                      <p className="break-words">{msg.text}</p>
-                      {extractUrl(msg.text) && (
-                        <LinkPreview url={extractUrl(msg.text)!} />
+                    <div className="flex flex-col gap-1 max-w-[70%]">
+                      <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed relative ${
+                        isMe
+                          ? 'bg-purple-600 text-white rounded-br-sm'
+                          : 'bg-zinc-800 text-zinc-100 rounded-bl-sm'
+                      }`}>
+                        {msg.text && <p className="break-words">{msg.text}</p>}
+                        {msg.imageUrl && (
+                          <img
+                            src={msg.imageUrl}
+                            alt="Zdjęcie"
+                            className="mt-1 max-w-full rounded-xl cursor-zoom-in max-h-64 object-contain"
+                            onClick={() => window.open(msg.imageUrl, '_blank')}
+                          />
+                        )}
+                        {msg.text && extractUrl(msg.text) && (
+                          <LinkPreview url={extractUrl(msg.text)!} />
+                        )}
+                        <p className={`text-[10px] mt-1 ${isMe ? 'text-purple-200/70' : 'text-zinc-500'}`}>
+                          {timeLabel(msg.createdAt)}
+                        </p>
+                        {/* Przycisk reakcji — hover */}
+                        <button
+                          onClick={e => { e.stopPropagation(); setReactionPickerMsgId(reactionPickerMsgId === msg.id ? null : msg.id); }}
+                          className="absolute -bottom-2 right-2 opacity-0 group-hover/msg:opacity-100 text-xs bg-zinc-700 hover:bg-zinc-600 text-white px-1.5 py-0.5 rounded-full transition-all"
+                        >
+                          😀
+                        </button>
+                      </div>
+                      {/* Picker reakcji */}
+                      {reactionPickerMsgId === msg.id && (
+                        <div className={`flex gap-1 bg-zinc-800 border border-zinc-700 rounded-xl p-1.5 shadow-xl ${isMe ? 'self-end' : 'self-start'}`}>
+                          {EMOJI_LIST.map(e => (
+                            <button
+                              key={e}
+                              onClick={() => handleToggleReaction(msg.id, e)}
+                              className="text-base hover:scale-125 transition-transform"
+                            >{e}</button>
+                          ))}
+                        </div>
                       )}
-                      <p className={`text-[10px] mt-1 ${isMe ? 'text-purple-200/70' : 'text-zinc-500'}`}>
-                        {timeLabel(msg.createdAt)}
-                      </p>
+                      {/* Wyświetl reakcje */}
+                      {Object.keys(reactionGroups).length > 0 && (
+                        <div className={`flex gap-1 flex-wrap ${isMe ? 'justify-end' : 'justify-start'}`}>
+                          {Object.entries(reactionGroups).map(([emoji, { count, mine }]) => (
+                            <button
+                              key={emoji}
+                              onClick={() => handleToggleReaction(msg.id, emoji)}
+                              className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full border transition-all ${
+                                mine
+                                  ? 'bg-purple-500/30 border-purple-500/50 text-white'
+                                  : 'bg-zinc-700/50 border-zinc-600/50 text-zinc-300 hover:bg-zinc-700'
+                              }`}
+                            >
+                              {emoji} <span className="font-bold">{count}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -309,8 +392,38 @@ const MessagesView: React.FC<MessagesViewProps> = ({ currentUser, initialUserId,
             <div ref={bottomRef} />
           </div>
 
+          {/* Podgląd zdjęcia */}
+          {msgImage && (
+            <div className="px-4 pb-2 shrink-0 flex items-center gap-2">
+              <div className="relative">
+                <img src={msgImage} alt="Zdjęcie do wysłania" className="h-16 w-16 rounded-xl object-cover border border-zinc-600" />
+                <button
+                  onClick={() => setMsgImage(null)}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-600 rounded-full flex items-center justify-center"
+                >
+                  <XIcon size={10} className="text-white" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Pole tekstowe */}
-          <div className="flex items-center gap-3 px-4 py-3 border-t border-zinc-800 shrink-0">
+          <div className="flex items-center gap-2 px-4 py-3 border-t border-zinc-800 shrink-0">
+            {/* Upload zdjęcia */}
+            <button
+              onClick={() => imgInputRef.current?.click()}
+              className="w-10 h-10 bg-zinc-800 hover:bg-zinc-700 rounded-xl flex items-center justify-center transition-colors shrink-0 border border-zinc-700"
+              title="Wyślij zdjęcie"
+            >
+              <ImagePlus size={16} className="text-zinc-400" />
+            </button>
+            <input
+              ref={imgInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
             <input
               type="text"
               value={text}
@@ -321,7 +434,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({ currentUser, initialUserId,
             />
             <button
               onClick={handleSend}
-              disabled={!text.trim() || sending}
+              disabled={(!text.trim() && !msgImage) || sending}
               className="w-10 h-10 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl flex items-center justify-center transition-colors shrink-0"
             >
               {sending ? <Loader2 size={16} className="animate-spin text-white" /> : <Send size={16} className="text-white" />}

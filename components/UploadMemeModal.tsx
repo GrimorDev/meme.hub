@@ -18,6 +18,7 @@ const selectCls = `w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py
 const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSwitchToStudio, onUploadSuccess, user }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile]       = useState<File | null>(null);
+  const [mediaType, setMediaType]       = useState<'image' | 'video'>('image');
   const [caption, setCaption]           = useState('');
   const [mainCategory, setMainCategory] = useState('');
   const [subCategory, setSubCategory]   = useState('');
@@ -34,6 +35,8 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
     const file = e.target.files?.[0];
     if (file) {
       setImageFile(file);
+      const isVid = file.type.startsWith('video/');
+      setMediaType(isVid ? 'video' : 'image');
       const reader = new FileReader();
       reader.onloadend = () => setImagePreview(reader.result as string);
       reader.readAsDataURL(file);
@@ -51,7 +54,7 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
     setError('');
 
     try {
-      const url = await db.uploadFile(imageFile);
+      const { url, mediaType: uploadedType } = await db.uploadFile(imageFile);
       const tag = subCategory || mainCategory;
       await db.createPost({
         url,
@@ -60,7 +63,8 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
         avatarColor: user.avatarColor,
         tags: [tag],
         timeAgo: 'Teraz',
-        isNsfw,
+        isNsfw: isNsfw || mainCategory === 'nsfw',
+        mediaType: uploadedType,
       });
 
       setImagePreview(null);
@@ -104,7 +108,11 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
                 }`}
               >
                 {imagePreview ? (
-                  <img src={imagePreview} className="w-full h-full object-contain" alt="Preview" />
+                  mediaType === 'video' ? (
+                    <video src={imagePreview} className="w-full h-full object-contain" controls muted />
+                  ) : (
+                    <img src={imagePreview} className="w-full h-full object-contain" alt="Preview" />
+                  )
                 ) : (
                   <>
                     <div className="p-6 rounded-3xl bg-zinc-900 text-zinc-600">
@@ -112,14 +120,14 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
                     </div>
                     <div className="text-center px-4">
                       <p className="font-black uppercase text-xs tracking-widest text-zinc-400">Kliknij, aby wgrać</p>
-                      <p className="text-[10px] text-zinc-600 mt-1 uppercase">JPG, PNG, GIF</p>
+                      <p className="text-[10px] text-zinc-600 mt-1 uppercase">JPG, PNG, GIF, MP4, WEBM</p>
                     </div>
                   </>
                 )}
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,video/mp4,video/webm,video/quicktime"
                   onChange={handleFileChange}
                   className="hidden"
                 />
@@ -157,7 +165,7 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
                 <div className="relative">
                   <select
                     value={mainCategory}
-                    onChange={e => { setMainCategory(e.target.value); setSubCategory(''); setError(''); }}
+                    onChange={e => { setMainCategory(e.target.value); setSubCategory(''); setError(''); if (e.target.value === 'nsfw') setIsNsfw(true); }}
                     className={selectCls + (mainCategory ? ' text-white' : ' text-zinc-500')}
                     required
                   >

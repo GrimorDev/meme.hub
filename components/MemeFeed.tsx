@@ -358,13 +358,25 @@ const MemeCard: React.FC<{
         </div>
 
         <div className="relative aspect-[4/5] overflow-hidden bg-black flex items-center justify-center mx-3 rounded-2xl group/image">
-          <img
-            src={meme.url}
-            alt={meme.caption}
-            loading="lazy"
-            decoding="async"
-            className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${meme.isNsfw && !nsfwRevealed ? 'blur-2xl scale-110' : ''}`}
-          />
+          {meme.mediaType === 'video' ? (
+            <video
+              src={meme.url}
+              className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${meme.isNsfw && !nsfwRevealed ? 'blur-2xl scale-110' : ''}`}
+              controls
+              muted
+              loop
+              playsInline
+              preload="metadata"
+            />
+          ) : (
+            <img
+              src={meme.url}
+              alt={meme.caption}
+              loading="lazy"
+              decoding="async"
+              className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${meme.isNsfw && !nsfwRevealed ? 'blur-2xl scale-110' : ''}`}
+            />
+          )}
           {/* NSFW overlay */}
           {meme.isNsfw && !nsfwRevealed && (
             <div

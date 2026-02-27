@@ -4,6 +4,37 @@ import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
+// Pomocnik — czy user jest adminem
+async function isAdmin(userId: string): Promise<boolean> {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  return u?.role === 'admin';
+}
+
+function formatMessage(m: any, myId?: string) {
+  return {
+    id:               m.id,
+    senderId:         m.senderId,
+    receiverId:       m.receiverId,
+    senderUsername:   m.sender.username,
+    senderAvatarColor: m.sender.avatarColor,
+    senderAvatarUrl:  m.sender.avatarUrl ?? undefined,
+    text:             m.text,
+    imageUrl:         m.imageUrl ?? undefined,
+    read:             m.read,
+    createdAt:        m.createdAt.toISOString(),
+    reactions:        (m.reactions ?? []).map((r: any) => ({
+      id:    r.id,
+      emoji: r.emoji,
+      userId: r.userId,
+    })),
+  };
+}
+
+const MSG_INCLUDE = {
+  sender: { select: { id: true, username: true, avatarColor: true, avatarUrl: true } },
+  reactions: { select: { id: true, emoji: true, userId: true } },
+} as const;
+
 // GET /api/messages/unread-count — do pollingu
 router.get('/unread-count', requireAuth, async (req, res) => {
   try {
@@ -22,7 +53,6 @@ router.get('/conversations', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId!;
 
-    // Pobierz wszystkie wiadomości gdzie user jest nadawcą lub odbiorcą
     const messages = await prisma.message.findMany({
       where: {
         OR: [{ senderId: userId }, { receiverId: userId }],
@@ -34,7 +64,6 @@ router.get('/conversations', requireAuth, async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Grupuj po partnerze rozmowy
     const conversationMap = new Map<string, {
       userId: string; username: string; avatarColor: string; avatarUrl?: string;
       lastMessage: string; lastMessageAt: string; unreadCount: number;
@@ -45,19 +74,18 @@ router.get('/conversations', requireAuth, async (req, res) => {
       const other = isFromMe ? msg.receiver : msg.sender;
 
       if (!conversationMap.has(other.id)) {
-        // Policz nieprzeczytane od tej osoby
         const unread = messages.filter(
           m => m.senderId === other.id && m.receiverId === userId && !m.read
         ).length;
 
         conversationMap.set(other.id, {
-          userId:         other.id,
-          username:       other.username,
-          avatarColor:    other.avatarColor,
-          avatarUrl:      other.avatarUrl ?? undefined,
-          lastMessage:    msg.text,
-          lastMessageAt:  msg.createdAt.toISOString(),
-          unreadCount:    unread,
+          userId:        other.id,
+          username:      other.username,
+          avatarColor:   other.avatarColor,
+          avatarUrl:     other.avatarUrl ?? undefined,
+          lastMessage:   msg.imageUrl && !msg.text ? '📷 Zdjęcie' : msg.text,
+          lastMessageAt: msg.createdAt.toISOString(),
+          unreadCount:   unread,
         });
       }
     }
@@ -72,7 +100,7 @@ router.get('/conversations', requireAuth, async (req, res) => {
 // GET /api/messages/:userId — historia wiadomości z danym userem
 router.get('/:userId', requireAuth, async (req, res) => {
   try {
-    const myId = req.session.userId!;
+    const myId    = req.session.userId!;
     const otherId = req.params.userId;
 
     const messages = await prisma.message.findMany({
@@ -82,23 +110,11 @@ router.get('/:userId', requireAuth, async (req, res) => {
           { senderId: otherId, receiverId: myId },
         ],
       },
-      include: {
-        sender: { select: { id: true, username: true, avatarColor: true, avatarUrl: true } },
-      },
+      include: MSG_INCLUDE,
       orderBy: { createdAt: 'asc' },
     });
 
-    res.json(messages.map(m => ({
-      id:               m.id,
-      senderId:         m.senderId,
-      receiverId:       m.receiverId,
-      senderUsername:   m.sender.username,
-      senderAvatarColor: m.sender.avatarColor,
-      senderAvatarUrl:  m.sender.avatarUrl ?? undefined,
-      text:             m.text,
-      read:             m.read,
-      createdAt:        m.createdAt.toISOString(),
-    })));
+    res.json(messages.map(m => formatMessage(m, myId)));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Błąd serwera' });
@@ -108,16 +124,15 @@ router.get('/:userId', requireAuth, async (req, res) => {
 // POST /api/messages/:userId — wyślij wiadomość
 router.post('/:userId', requireAuth, async (req, res) => {
   try {
-    const myId     = req.session.userId!;
+    const myId       = req.session.userId!;
     const receiverId = req.params.userId;
-    const { text } = req.body as { text?: string };
+    const { text, imageUrl } = req.body as { text?: string; imageUrl?: string };
 
-    if (!text?.trim()) {
+    if (!text?.trim() && !imageUrl) {
       res.status(400).json({ error: 'Wiadomość nie może być pusta' });
       return;
     }
 
-    // Sprawdź czy odbiorca istnieje
     const receiver = await prisma.user.findUnique({
       where: { id: receiverId },
       select: { id: true, username: true },
@@ -128,34 +143,28 @@ router.post('/:userId', requireAuth, async (req, res) => {
     }
 
     const message = await prisma.message.create({
-      data: { senderId: myId, receiverId, text: text.trim() },
-      include: {
-        sender: { select: { id: true, username: true, avatarColor: true, avatarUrl: true } },
+      data: {
+        senderId: myId,
+        receiverId,
+        text: text?.trim() ?? '',
+        imageUrl: imageUrl ?? null,
       },
+      include: MSG_INCLUDE,
     });
 
-    // Utwórz powiadomienie dla odbiorcy
+    // Powiadomienie dla odbiorcy
+    const notifBody = imageUrl && !text?.trim() ? '📷 Zdjęcie' : (text?.trim() ?? '').slice(0, 120);
     await prisma.notification.create({
       data: {
         userId: receiverId,
         type:   'message',
-        title:  `Wiadomość od ${req.session.username}`,
-        body:   text.trim().slice(0, 120),
+        title:  `Wiadomość od ${(req.session as any).username ?? 'użytkownika'}`,
+        body:   notifBody,
         link:   `/messages/${myId}`,
       },
     });
 
-    res.status(201).json({
-      id:               message.id,
-      senderId:         message.senderId,
-      receiverId:       message.receiverId,
-      senderUsername:   message.sender.username,
-      senderAvatarColor: message.sender.avatarColor,
-      senderAvatarUrl:  message.sender.avatarUrl ?? undefined,
-      text:             message.text,
-      read:             message.read,
-      createdAt:        message.createdAt.toISOString(),
-    });
+    res.status(201).json(formatMessage(message, myId));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Błąd serwera' });
@@ -174,6 +183,49 @@ router.put('/:userId/read', requireAuth, async (req, res) => {
       data: { read: true },
     });
     res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// POST /api/messages/:userId/reactions/:messageId — toggle reakcji
+router.post('/:userId/reactions/:messageId', requireAuth, async (req, res) => {
+  try {
+    const myId      = req.session.userId!;
+    const messageId = req.params.messageId;
+    const { emoji } = req.body as { emoji?: string };
+
+    if (!emoji) {
+      res.status(400).json({ error: 'Brak emoji' });
+      return;
+    }
+
+    // Sprawdź czy wiadomość należy do tej rozmowy
+    const message = await prisma.message.findUnique({ where: { id: messageId } });
+    if (!message) {
+      res.status(404).json({ error: 'Nie znaleziono wiadomości' });
+      return;
+    }
+    const otherId = req.params.userId;
+    const inConv = (message.senderId === myId && message.receiverId === otherId) ||
+                   (message.senderId === otherId && message.receiverId === myId);
+    if (!inConv) {
+      res.status(403).json({ error: 'Brak dostępu' });
+      return;
+    }
+
+    const existing = await prisma.messageReaction.findUnique({
+      where: { messageId_userId_emoji: { messageId, userId: myId, emoji } },
+    });
+
+    if (existing) {
+      await prisma.messageReaction.delete({ where: { id: existing.id } });
+      res.json({ added: false, emoji });
+    } else {
+      await prisma.messageReaction.create({ data: { messageId, userId: myId, emoji } });
+      res.json({ added: true, emoji });
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Błąd serwera' });

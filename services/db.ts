@@ -1,4 +1,4 @@
-import { MemePost, User, Comment, AdminUser, AdminReport, AdminUserReport, CommunityTemplate, PaginatedPosts, AppNotification, DirectMessage, Conversation } from '../types';
+import { MemePost, User, Comment, AdminUser, AdminReport, AdminUserReport, CommunityTemplate, PaginatedPosts, AppNotification, DirectMessage, Conversation, MessageReaction } from '../types';
 
 const API_BASE =
   (import.meta as any).env?.VITE_API_URL !== undefined &&
@@ -128,6 +128,7 @@ class ApiClient {
     timeAgo: string;
     description?: string;
     isNsfw?: boolean;
+    mediaType?: 'image' | 'video';
   }): Promise<MemePost> {
     return request<MemePost>('/posts', {
       method: 'POST',
@@ -235,11 +236,23 @@ class ApiClient {
   async adminBanUser(id: string): Promise<{ banned: boolean }> {
     return request(`/admin/users/${id}/ban`, { method: 'POST' });
   }
-  async adminSetRole(id: string, role: 'user' | 'admin'): Promise<{ role: string }> {
+  async adminSetRole(id: string, role: 'user' | 'moderator' | 'admin'): Promise<{ role: string }> {
     return request(`/admin/users/${id}/role`, {
       method: 'POST',
       body: JSON.stringify({ role }),
     });
+  }
+
+  async adminChatSearch(user1: string, user2: string): Promise<{
+    user1: { id: string; username: string; avatarColor: string; avatarUrl?: string };
+    user2: { id: string; username: string; avatarColor: string; avatarUrl?: string };
+    messages: DirectMessage[];
+  }> {
+    return request(`/admin/chat-search?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`);
+  }
+
+  async adminGetMyRole(): Promise<{ role: string }> {
+    return request('/admin/me');
   }
   async submitUserReport(targetUserId: string, reason: string): Promise<void> {
     await request('/admin/user-reports', {
@@ -319,10 +332,17 @@ class ApiClient {
     catch { return []; }
   }
 
-  async sendMessage(userId: string, text: string): Promise<DirectMessage> {
+  async sendMessage(userId: string, text: string, imageUrl?: string): Promise<DirectMessage> {
     return request<DirectMessage>(`/messages/${userId}`, {
       method: 'POST',
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, imageUrl }),
+    });
+  }
+
+  async toggleMessageReaction(userId: string, messageId: string, emoji: string): Promise<{ added: boolean; emoji: string }> {
+    return request(`/messages/${userId}/reactions/${messageId}`, {
+      method: 'POST',
+      body: JSON.stringify({ emoji }),
     });
   }
 
@@ -397,7 +417,7 @@ class ApiClient {
     return request(`/admin/ban-history/${userId}`);
   }
 
-  async uploadFile(file: File): Promise<string> {
+  async uploadFile(file: File): Promise<{ url: string; mediaType: 'image' | 'video' }> {
     const formData = new FormData();
     formData.append('file', file);
     const res = await fetch(`${API_BASE}/upload`, {
@@ -409,8 +429,8 @@ class ApiClient {
       const err = await res.json().catch(() => ({ error: 'Upload nieudany' }));
       throw new Error((err as any).error || 'Upload nieudany');
     }
-    const data = (await res.json()) as { url: string };
-    return data.url;
+    const data = (await res.json()) as { url: string; mediaType?: string };
+    return { url: data.url, mediaType: data.mediaType === 'video' ? 'video' : 'image' };
   }
 }
 

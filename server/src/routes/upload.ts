@@ -9,8 +9,9 @@ router.post('/', requireAuth, upload.single('file'), processImage, (req, res) =>
     res.status(400).json({ error: 'Brak pliku lub nieprawidłowy format' });
     return;
   }
-  const url = `/uploads/${req.file.filename}`;
-  res.json({ url });
+  const url       = `/uploads/${(req.file as any).filename}`;
+  const mediaType = (req.file as any).mediaType ?? 'image';
+  res.json({ url, mediaType });
 });
 
 export default router;

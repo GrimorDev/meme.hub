@@ -109,7 +109,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, accentClass, onUserUp
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const url = await db.uploadFile(file);
+      const { url } = await db.uploadFile(file);
       const updated = await db.updateUser(user.id, { avatarUrl: url });
       if (updated) onUserUpdate(updated);
     } catch { /* ignoruj */ }
@@ -120,7 +120,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, accentClass, onUserUp
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const url = await db.uploadFile(file);
+      const { url } = await db.uploadFile(file);
       const updated = await db.updateUser(user.id, { bannerUrl: url });
       if (updated) onUserUpdate(updated);
     } catch { /* ignoruj */ }
