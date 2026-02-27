@@ -417,10 +417,11 @@ class ApiClient {
     return request(`/admin/ban-history/${userId}`);
   }
 
-  async uploadFile(file: File): Promise<{ url: string; mediaType: 'image' | 'video' }> {
+  async uploadFile(file: File, type: 'post' | 'other' = 'other'): Promise<{ url: string; mediaType: 'image' | 'video' }> {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await fetch(`${API_BASE}/upload`, {
+    const endpoint = type === 'post' ? `${API_BASE}/upload?type=post` : `${API_BASE}/upload`;
+    const res = await fetch(endpoint, {
       method: 'POST',
       credentials: 'include',
       body: formData,

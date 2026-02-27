@@ -215,16 +215,27 @@ router.post('/:userId/reactions/:messageId', requireAuth, async (req, res) => {
       return;
     }
 
-    const existing = await prisma.messageReaction.findUnique({
-      where: { messageId_userId_emoji: { messageId, userId: myId, emoji } },
+    // Szukaj DOWOLNEJ istniejącej reakcji tego usera na tę wiadomość (max 1)
+    const existing = await prisma.messageReaction.findFirst({
+      where: { messageId, userId: myId },
     });
 
     if (existing) {
-      await prisma.messageReaction.delete({ where: { id: existing.id } });
-      res.json({ added: false, emoji });
+      if (existing.emoji === emoji) {
+        // Ten sam emoji → toggle off
+        await prisma.messageReaction.delete({ where: { id: existing.id } });
+        res.json({ action: 'removed', emoji });
+      } else {
+        // Inny emoji → podmień (1 reakcja per user)
+        await prisma.messageReaction.update({
+          where: { id: existing.id },
+          data: { emoji },
+        });
+        res.json({ action: 'replaced', emoji, prevEmoji: existing.emoji });
+      }
     } else {
       await prisma.messageReaction.create({ data: { messageId, userId: myId, emoji } });
-      res.json({ added: true, emoji });
+      res.json({ action: 'added', emoji });
     }
   } catch (err) {
     console.error(err);

@@ -96,6 +96,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({ currentUser, initialUserId,
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [showThread, setShowThread] = useState(!!initialUserId);
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -337,7 +338,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({ currentUser, initialUserId,
                             src={msg.imageUrl}
                             alt="Zdjęcie"
                             className="mt-1 max-w-full rounded-xl cursor-zoom-in max-h-64 object-contain"
-                            onClick={() => window.open(msg.imageUrl, '_blank')}
+                            onClick={e => { e.stopPropagation(); setLightboxUrl(msg.imageUrl!); }}
                           />
                         )}
                         {msg.text && extractUrl(msg.text) && (
@@ -446,10 +447,33 @@ const MessagesView: React.FC<MessagesViewProps> = ({ currentUser, initialUserId,
   );
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden">
-      {ConversationsList}
-      {ThreadPanel}
-    </div>
+    <>
+      <div className="flex h-[calc(100vh-8rem)] bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden">
+        {ConversationsList}
+        {ThreadPanel}
+      </div>
+
+      {/* Lightbox dla zdjęć w wiadomościach */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 cursor-zoom-out animate-in fade-in duration-200"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            className="absolute top-4 right-4 w-10 h-10 bg-zinc-800/80 hover:bg-zinc-700 text-white rounded-full flex items-center justify-center z-[101] transition-colors"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <XIcon size={20} />
+          </button>
+          <img
+            src={lightboxUrl}
+            alt="Zdjęcie"
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-2xl shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </>
   );
 };
 

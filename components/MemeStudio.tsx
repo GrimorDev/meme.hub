@@ -429,6 +429,37 @@ const MemeStudio: React.FC<Props> = ({ user }) => {
         drawWrappedText(ctx, box.text, x, y, maxWidth, lineHeight, outlinePhysWidth, box.outlineColor, box.color, box.isBold);
       });
 
+      // ── Znak wodny ────────────────────────────────────────────
+      if (user?.username) {
+        const wmSize    = Math.max(14, Math.min(24, Math.floor(canvas.height * 0.030)));
+        const wmPad     = Math.max(10, Math.floor(canvas.height * 0.018));
+        const wmFont    = `bold ${wmSize}px Arial, sans-serif`;
+        const wmShadow  = 'rgba(0,0,0,0.65)';
+        const wmMain    = 'rgba(255,255,255,0.72)';
+
+        ctx.save();
+        ctx.font = wmFont;
+        ctx.globalAlpha = 1;
+
+        // Lewy-dolny: @username
+        ctx.textAlign    = 'left';
+        ctx.textBaseline = 'bottom';
+        ctx.fillStyle = wmShadow;
+        ctx.fillText(`@${user.username}`, wmPad + 1, canvas.height - wmPad + 1);
+        ctx.fillStyle = wmMain;
+        ctx.fillText(`@${user.username}`, wmPad, canvas.height - wmPad);
+
+        // Prawy-górny: memster.pl
+        ctx.textAlign    = 'right';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = wmShadow;
+        ctx.fillText('memster.pl', canvas.width - wmPad + 1, wmPad + 1);
+        ctx.fillStyle = wmMain;
+        ctx.fillText('memster.pl', canvas.width - wmPad, wmPad);
+
+        ctx.restore();
+      }
+
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = `meme-${Date.now()}.png`;

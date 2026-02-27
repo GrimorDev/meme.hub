@@ -377,6 +377,22 @@ const MemeCard: React.FC<{
               className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${meme.isNsfw && !nsfwRevealed ? 'blur-2xl scale-110' : ''}`}
             />
           )}
+          {/* ── Znak wodny ── */}
+          <div className="absolute inset-0 pointer-events-none select-none z-[5]">
+            <span
+              className="absolute top-2 right-2 text-[10px] font-black leading-none"
+              style={{ color: 'rgba(255,255,255,0.60)', textShadow: '0 1px 3px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.6)' }}
+            >
+              memster.pl
+            </span>
+            <span
+              className="absolute bottom-16 left-2 text-[10px] font-black leading-none"
+              style={{ color: 'rgba(255,255,255,0.60)', textShadow: '0 1px 3px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.6)' }}
+            >
+              @{meme.author}
+            </span>
+          </div>
+
           {/* NSFW overlay */}
           {meme.isNsfw && !nsfwRevealed && (
             <div

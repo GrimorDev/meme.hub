@@ -250,6 +250,22 @@ const MemeDetail: React.FC<MemeDetailProps> = ({ meme: initialMeme, onBack, user
                />
              )}
              
+             {/* ── Znak wodny ── */}
+             <div className="absolute inset-0 pointer-events-none select-none z-[5]">
+               <span
+                 className="absolute top-3 right-4 text-[11px] font-black leading-none"
+                 style={{ color: 'rgba(255,255,255,0.58)', textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.65)' }}
+               >
+                 memster.pl
+               </span>
+               <span
+                 className="absolute bottom-4 left-4 text-[11px] font-black leading-none"
+                 style={{ color: 'rgba(255,255,255,0.58)', textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.65)' }}
+               >
+                 @{meme.author}
+               </span>
+             </div>
+
              {/* Action Overlay Mobile Only */}
              <div className="lg:hidden absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/90 to-transparent">
                 <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white drop-shadow-lg mb-4">

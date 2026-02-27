@@ -54,7 +54,7 @@ const UploadMemeModal: React.FC<UploadMemeModalProps> = ({ isOpen, onClose, onSw
     setError('');
 
     try {
-      const { url, mediaType: uploadedType } = await db.uploadFile(imageFile);
+      const { url, mediaType: uploadedType } = await db.uploadFile(imageFile, 'post');
       const tag = subCategory || mainCategory;
       await db.createPost({
         url,
