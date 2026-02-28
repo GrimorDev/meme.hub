@@ -23,6 +23,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Ufaj proxy nginx — wymagane dla X-Forwarded-For i rate limiting za reverse-proxy
+app.set('trust proxy', 1);
+
 // Utwórz tabelę sesji jeśli nie istnieje (connect-pg-simple nie robi tego natychmiast)
 async function ensureSessionTable() {
   try {
@@ -60,8 +63,11 @@ app.use(
 );
 
 // ── CORS — tylko zaufane originy ───────────────────────────────
-const rawOrigins = process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost';
-const allowedOrigins = rawOrigins.split(',').map((o) => o.trim());
+// Fallback: FRONTEND_URL z .env (już ustawione na produkcji) + localhost dev
+const frontendUrl = process.env.FRONTEND_URL?.trim();
+const defaultOrigins = ['http://localhost:5173', 'http://localhost', frontendUrl].filter(Boolean).join(',');
+const rawOrigins = process.env.ALLOWED_ORIGINS || defaultOrigins;
+const allowedOrigins = rawOrigins.split(',').map((o) => o.trim()).filter(Boolean);
 
 app.use(
   cors({
