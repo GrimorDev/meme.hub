@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Grid, Heart, MessageCircle, Calendar, Trophy, ImageOff, Edit3, Shield, Flag, Check, X, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Grid, Heart, MessageCircle, Calendar, Trophy, ImageOff, Edit3, Shield, Flag, Check, X, MessageSquare, Play } from 'lucide-react';
 import { MemePost, User } from '../types';
 import { db } from '../services/db';
 import EditProfileModal from './EditProfileModal';
@@ -176,12 +176,28 @@ const UserProfile: React.FC<UserProfileProps> = ({ username, onBack, onMemeSelec
         {posts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {posts.map(post => (
-                    <div 
-                        key={post.id} 
+                    <div
+                        key={post.id}
                         onClick={() => onMemeSelect(post)}
                         className="group relative aspect-square bg-zinc-900 rounded-2xl overflow-hidden cursor-pointer border border-zinc-800 hover:border-purple-500/50 transition-all"
                     >
-                        <img src={post.url} alt={post.caption} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        {post.mediaType === 'video' ? (
+                          <video
+                            src={post.url}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            muted
+                            playsInline
+                            preload="metadata"
+                          />
+                        ) : (
+                          <img src={post.url} alt={post.caption} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        )}
+                        {/* Znacznik wideo */}
+                        {post.mediaType === 'video' && (
+                          <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/70 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full pointer-events-none">
+                            <Play size={8} fill="currentColor" /> VIDEO
+                          </div>
+                        )}
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-4 text-center">
                             <p className="font-black text-white text-sm line-clamp-2">{post.caption}</p>
                             <div className="flex items-center gap-3 mt-2">

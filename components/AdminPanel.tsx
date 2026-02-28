@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Trash2, Ban, Flag, Users, Image, AlertTriangle, Check, X, RefreshCw, UserCheck, UserX, Sparkles, Settings, Save, BarChart2, Clock, MessageSquare, Search } from 'lucide-react';
+import { Shield, Trash2, Ban, Flag, Users, Image, AlertTriangle, Check, X, RefreshCw, UserCheck, UserX, Sparkles, Settings, Save, BarChart2, Clock, MessageSquare, Search, Heart, MessageCircle, Play, Calendar } from 'lucide-react';
 import { db } from '../services/db';
 import { AdminUser, AdminReport, AdminUserReport, MemePost, AdminStats, DirectMessage } from '../types';
 
@@ -31,6 +31,8 @@ const AdminPanel: React.FC<{ currentUserRole?: string }> = ({ currentUserRole = 
   const [chatError, setChatError] = useState('');
 
   const isAdmin = currentUserRole === 'admin';
+
+  const [selectedPost, setSelectedPost] = useState<(MemePost & { reportCount: number; timestamp?: number; timeAgo?: string }) | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -297,10 +299,24 @@ const AdminPanel: React.FC<{ currentUserRole?: string }> = ({ currentUserRole = 
           {tab === 'posts' && (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {posts.map(post => (
-                <div key={post.id} className={`bg-zinc-900 border rounded-3xl overflow-hidden transition-all group ${post.featured ? 'border-green-700/50 hover:border-green-600/60' : 'border-amber-700/40 hover:border-amber-600/50'}`}>
-                  <div className="relative aspect-video">
-                    <img src={post.url} alt={post.caption} className="w-full h-full object-cover" />
-                    <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                <div
+                  key={post.id}
+                  onClick={() => setSelectedPost(post as any)}
+                  className={`bg-zinc-900 border rounded-3xl overflow-hidden transition-all group cursor-pointer ${post.featured ? 'border-green-700/50 hover:border-green-600/60' : 'border-amber-700/40 hover:border-amber-600/50'}`}
+                >
+                  <div className="relative aspect-video bg-black">
+                    {(post as any).mediaType === 'video' ? (
+                      <video
+                        src={post.url}
+                        className="w-full h-full object-cover"
+                        muted
+                        playsInline
+                        preload="metadata"
+                      />
+                    ) : (
+                      <img src={post.url} alt={post.caption} className="w-full h-full object-cover" />
+                    )}
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap">
                       {post.featured ? (
                         <span className="flex items-center gap-1 bg-green-600 text-white text-[10px] font-black px-2 py-1 rounded-full">
                           <Check size={9} /> NA FEEDZIE
@@ -308,6 +324,11 @@ const AdminPanel: React.FC<{ currentUserRole?: string }> = ({ currentUserRole = 
                       ) : (
                         <span className="flex items-center gap-1 bg-amber-500 text-black text-[10px] font-black px-2 py-1 rounded-full">
                           <Sparkles size={9} /> KOLEJKA
+                        </span>
+                      )}
+                      {(post as any).mediaType === 'video' && (
+                        <span className="flex items-center gap-1 bg-blue-600 text-white text-[10px] font-black px-2 py-1 rounded-full">
+                          <Play size={9} /> VIDEO
                         </span>
                       )}
                     </div>
@@ -323,7 +344,7 @@ const AdminPanel: React.FC<{ currentUserRole?: string }> = ({ currentUserRole = 
                       <span className="text-xs text-zinc-500 truncate">@{post.author} · {post.likes} lajków</span>
                       <div className="flex gap-1.5 shrink-0">
                         <button
-                          onClick={() => handleFeaturePost(post.id, !!post.featured)}
+                          onClick={e => { e.stopPropagation(); handleFeaturePost(post.id, !!post.featured); }}
                           className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-bold text-xs transition-all border ${
                             post.featured
                               ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white border-zinc-700'
@@ -333,7 +354,7 @@ const AdminPanel: React.FC<{ currentUserRole?: string }> = ({ currentUserRole = 
                           <Sparkles size={11} /> {post.featured ? 'Cofnij' : 'Promuj'}
                         </button>
                         <button
-                          onClick={() => handleDeletePost(post.id, post.caption)}
+                          onClick={e => { e.stopPropagation(); handleDeletePost(post.id, post.caption); }}
                           className="flex items-center gap-1 px-2.5 py-1.5 bg-red-900/20 hover:bg-red-600 text-red-500 hover:text-white rounded-xl font-bold text-xs transition-all border border-red-900/30 hover:border-red-600"
                         >
                           <Trash2 size={11} /> Usuń
@@ -708,6 +729,114 @@ const AdminPanel: React.FC<{ currentUserRole?: string }> = ({ currentUserRole = 
           </div>
         </div>
       )}
+
+      {/* Post Detail Modal */}
+      {selectedPost && (() => {
+        const p = selectedPost as any;
+        const dateStr = p.timestamp
+          ? new Date(p.timestamp).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+          : (p.timeAgo ?? '—');
+        return (
+          <div
+            className="fixed inset-0 z-[75] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setSelectedPost(null)}
+          >
+            <div
+              className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Media */}
+              <div className="relative aspect-video bg-black">
+                {p.mediaType === 'video' ? (
+                  <video
+                    src={p.url}
+                    className="w-full h-full object-contain"
+                    controls
+                    autoPlay
+                    muted
+                    playsInline
+                  />
+                ) : (
+                  <img src={p.url} alt={p.caption} className="w-full h-full object-contain" />
+                )}
+                <button
+                  onClick={() => setSelectedPost(null)}
+                  className="absolute top-3 right-3 w-8 h-8 bg-black/70 hover:bg-black rounded-full flex items-center justify-center text-white transition-colors"
+                >
+                  <X size={16} />
+                </button>
+                {p.featured ? (
+                  <span className="absolute top-3 left-3 flex items-center gap-1 bg-green-600 text-white text-[10px] font-black px-2 py-1 rounded-full">
+                    <Check size={9} /> NA FEEDZIE
+                  </span>
+                ) : (
+                  <span className="absolute top-3 left-3 flex items-center gap-1 bg-amber-500 text-black text-[10px] font-black px-2 py-1 rounded-full">
+                    <Sparkles size={9} /> KOLEJKA
+                  </span>
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="p-5 space-y-4">
+                <p className="font-black text-white text-base leading-tight">{p.caption}</p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-zinc-800 rounded-2xl p-3">
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Autor</p>
+                    <p className="font-black text-white text-sm">@{p.author}</p>
+                  </div>
+                  <div className="bg-zinc-800 rounded-2xl p-3">
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1 flex items-center gap-1">
+                      <Calendar size={9} /> Data dodania
+                    </p>
+                    <p className="font-bold text-zinc-200 text-xs">{dateStr}</p>
+                  </div>
+                  <div className="bg-zinc-800 rounded-2xl p-3 flex items-center gap-3">
+                    <Heart size={16} className="text-pink-500 shrink-0" fill="currentColor" />
+                    <div>
+                      <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Lajki</p>
+                      <p className="font-black text-pink-400 text-lg leading-none">{p.likes}</p>
+                    </div>
+                  </div>
+                  <div className="bg-zinc-800 rounded-2xl p-3 flex items-center gap-3">
+                    <MessageCircle size={16} className="text-blue-400 shrink-0" />
+                    <div>
+                      <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Komentarze</p>
+                      <p className="font-black text-blue-400 text-lg leading-none">{p.commentsCount}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {p.reportCount > 0 && (
+                  <div className="flex items-center gap-2 bg-red-900/20 border border-red-900/40 rounded-2xl px-4 py-3">
+                    <Flag size={14} className="text-red-400 shrink-0" />
+                    <p className="text-red-400 font-bold text-sm">{p.reportCount} zgłoszeń na ten post</p>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => { handleFeaturePost(p.id, !!p.featured); setSelectedPost(null); }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-sm transition-all ${
+                      p.featured
+                        ? 'bg-zinc-700 hover:bg-zinc-600 text-white'
+                        : 'bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-600/20'
+                    }`}
+                  >
+                    <Sparkles size={14} /> {p.featured ? 'Cofnij promowanie' : 'Promuj na feed'}
+                  </button>
+                  <button
+                    onClick={() => { handleDeletePost(p.id, p.caption); setSelectedPost(null); }}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-black text-sm transition-all shadow-lg shadow-red-600/20"
+                  >
+                    <Trash2 size={14} /> Usuń post
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Confirm Modal */}
       {confirmAction && (
