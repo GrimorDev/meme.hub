@@ -14,6 +14,8 @@ export default defineConfig(({ mode }) => {
         react(),
         VitePWA({
           registerType: 'autoUpdate',
+          // 'script-defer' zamiast domyślnego 'script' — nie blokuje renderowania
+          injectRegister: 'script-defer',
           includeAssets: ['icons/favicon.ico', 'icons/apple-touch-icon-180x180.png', 'icons/pwa-192x192.png', 'icons/pwa-512x512.png'],
           manifest: {
             name: 'Memster',
