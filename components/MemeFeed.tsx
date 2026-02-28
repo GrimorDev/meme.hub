@@ -126,7 +126,7 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
         </div>
       )}
 
-      <div className="flex flex-col gap-6 max-w-2xl mx-auto w-full">
+      <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
         {posts.map((meme) => (
           <MemeCard
             key={meme.id}
@@ -359,17 +359,17 @@ const MemeCard: React.FC<{
           </div>
         </div>
 
-        <div className="relative aspect-[4/5] overflow-hidden bg-black flex items-center justify-center mx-3 rounded-2xl group/image">
+        <div className="relative overflow-hidden bg-black flex items-center justify-center mx-3 rounded-2xl group/image">
           {meme.mediaType === 'video' ? (
             <>
               <video
                 ref={videoRef}
                 src={meme.url}
-                className={`w-full h-full object-cover ${meme.isNsfw && !nsfwRevealed ? 'blur-2xl scale-110' : ''}`}
-                muted
+                className={`w-full object-contain max-h-[72vh] ${meme.isNsfw && !nsfwRevealed ? 'blur-2xl' : ''}`}
                 loop
                 playsInline
                 preload="metadata"
+                controls={isVideoPlaying}
                 onPlay={() => setIsVideoPlaying(true)}
                 onPause={() => setIsVideoPlaying(false)}
               />
@@ -384,13 +384,6 @@ const MemeCard: React.FC<{
                   </div>
                 </div>
               )}
-              {/* Klik na grające wideo → pauza */}
-              {isVideoPlaying && (
-                <div
-                  className="absolute inset-0 z-[6] cursor-pointer"
-                  onClick={e => { e.stopPropagation(); videoRef.current?.pause(); }}
-                />
-              )}
             </>
           ) : (
             <img
@@ -398,7 +391,7 @@ const MemeCard: React.FC<{
               alt={meme.caption}
               loading="lazy"
               decoding="async"
-              className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${meme.isNsfw && !nsfwRevealed ? 'blur-2xl scale-110' : ''}`}
+              className={`w-full object-contain max-h-[72vh] transition-transform duration-700 group-hover:scale-105 ${meme.isNsfw && !nsfwRevealed ? 'blur-2xl' : ''}`}
             />
           )}
           {/* ── Znak wodny ── */}
