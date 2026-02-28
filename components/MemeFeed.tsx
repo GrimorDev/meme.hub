@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, TrendingUp, Flame, Star, Twitter, Facebook, Link as LinkIcon, X, Trash2, Edit3, Flag, AlertTriangle, Check, Hash, Search, Sparkles, ChevronLeft, ChevronRight, Menu, Bookmark, EyeOff } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, TrendingUp, Flame, Star, Twitter, Facebook, Link as LinkIcon, X, Trash2, Edit3, Flag, AlertTriangle, Check, Hash, Search, Sparkles, ChevronLeft, ChevronRight, Menu, Bookmark, EyeOff, Play } from 'lucide-react';
 import { MemePost, User } from '../types';
 import { db } from '../services/db';
 import UserHoverCard from './UserHoverCard';
@@ -126,7 +126,7 @@ const MemeFeed: React.FC<MemeFeedProps> = ({
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+      <div className="flex flex-col gap-6 max-w-2xl mx-auto w-full">
         {posts.map((meme) => (
           <MemeCard
             key={meme.id}
@@ -220,6 +220,8 @@ const MemeCard: React.FC<{
   const [showReportModal, setShowReportModal] = useState(false);
   const [nsfwRevealed, setNsfwRevealed] = useState(false);
   const [isSaved, setIsSaved] = useState(meme.isSaved ?? false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     setIsLiked(user ? meme.likedBy?.includes(user.id) : false);
@@ -359,15 +361,37 @@ const MemeCard: React.FC<{
 
         <div className="relative aspect-[4/5] overflow-hidden bg-black flex items-center justify-center mx-3 rounded-2xl group/image">
           {meme.mediaType === 'video' ? (
-            <video
-              src={meme.url}
-              className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${meme.isNsfw && !nsfwRevealed ? 'blur-2xl scale-110' : ''}`}
-              controls
-              muted
-              loop
-              playsInline
-              preload="metadata"
-            />
+            <>
+              <video
+                ref={videoRef}
+                src={meme.url}
+                className={`w-full h-full object-cover ${meme.isNsfw && !nsfwRevealed ? 'blur-2xl scale-110' : ''}`}
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                onPlay={() => setIsVideoPlaying(true)}
+                onPause={() => setIsVideoPlaying(false)}
+              />
+              {/* Przycisk Play — widoczny gdy wideo zatrzymane */}
+              {!isVideoPlaying && (
+                <div
+                  className="absolute inset-0 flex items-center justify-center z-[6] cursor-pointer"
+                  onClick={e => { e.stopPropagation(); videoRef.current?.play(); }}
+                >
+                  <div className="w-20 h-20 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/30 hover:bg-black/80 hover:scale-110 transition-all shadow-2xl">
+                    <Play size={32} className="text-white ml-1.5" fill="white" />
+                  </div>
+                </div>
+              )}
+              {/* Klik na grające wideo → pauza */}
+              {isVideoPlaying && (
+                <div
+                  className="absolute inset-0 z-[6] cursor-pointer"
+                  onClick={e => { e.stopPropagation(); videoRef.current?.pause(); }}
+                />
+              )}
+            </>
           ) : (
             <img
               src={meme.url}
