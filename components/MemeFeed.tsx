@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, TrendingUp, Flame, Star, Twitter, Facebook, Link as LinkIcon, X, Trash2, Edit3, Flag, AlertTriangle, Check, Hash, Search, Sparkles, ChevronLeft, ChevronRight, Menu, Bookmark, EyeOff, Play } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, TrendingUp, Flame, Star, Twitter, Facebook, Link as LinkIcon, X, Trash2, Edit3, Flag, AlertTriangle, Check, Hash, Search, Sparkles, ChevronLeft, ChevronRight, Menu, Bookmark, EyeOff, Play, Volume2, VolumeX } from 'lucide-react';
 import { MemePost, User } from '../types';
 import { db } from '../services/db';
 import UserHoverCard from './UserHoverCard';
@@ -221,6 +221,7 @@ const MemeCard: React.FC<{
   const [nsfwRevealed, setNsfwRevealed] = useState(false);
   const [isSaved, setIsSaved] = useState(meme.isSaved ?? false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isVideoMuted, setIsVideoMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -366,14 +367,14 @@ const MemeCard: React.FC<{
                 ref={videoRef}
                 src={meme.url}
                 className={`w-full object-contain max-h-[72vh] ${meme.isNsfw && !nsfwRevealed ? 'blur-2xl' : ''}`}
+                muted={isVideoMuted}
                 loop
                 playsInline
                 preload="metadata"
-                controls={isVideoPlaying}
                 onPlay={() => setIsVideoPlaying(true)}
                 onPause={() => setIsVideoPlaying(false)}
               />
-              {/* Przycisk Play — widoczny gdy wideo zatrzymane */}
+              {/* Przycisk Play — gdy wideo zatrzymane */}
               {!isVideoPlaying && (
                 <div
                   className="absolute inset-0 flex items-center justify-center z-[6] cursor-pointer"
@@ -382,6 +383,21 @@ const MemeCard: React.FC<{
                   <div className="w-20 h-20 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/30 hover:bg-black/80 hover:scale-110 transition-all shadow-2xl">
                     <Play size={32} className="text-white ml-1.5" fill="white" />
                   </div>
+                </div>
+              )}
+              {/* Overlay gdy gra — klik = pauza, przycisk głośności w rogu */}
+              {isVideoPlaying && (
+                <div
+                  className="absolute inset-0 z-[6] cursor-pointer"
+                  onClick={e => { e.stopPropagation(); videoRef.current?.pause(); }}
+                >
+                  <button
+                    className="absolute bottom-3 right-3 w-9 h-9 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-sm text-white hover:bg-black/80 transition-all border border-white/20 shadow-lg"
+                    onClick={e => { e.stopPropagation(); setIsVideoMuted(prev => !prev); }}
+                    title={isVideoMuted ? 'Włącz dźwięk' : 'Wycisz'}
+                  >
+                    {isVideoMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                  </button>
                 </div>
               )}
             </>
