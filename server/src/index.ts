@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { sessionMiddleware } from './session.js';
@@ -42,9 +43,36 @@ async function ensureSessionTable() {
   }
 }
 
+// ── Security headers (Helmet) ──────────────────────────────────
+app.use(
+  helmet({
+    // API server — CSP wyłączone (obsługuje frontend przez nginx)
+    contentSecurityPolicy: false,
+    // Wyłączone aby nie blokować wideo/obrazków cross-origin przez COEP
+    crossOriginEmbedderPolicy: false,
+    // Reszta domyślnie włączona:
+    // X-Content-Type-Options: nosniff
+    // X-Frame-Options: SAMEORIGIN
+    // X-DNS-Prefetch-Control: off
+    // Strict-Transport-Security (HSTS)
+    // Referrer-Policy: no-referrer
+  }),
+);
+
+// ── CORS — tylko zaufane originy ───────────────────────────────
+const rawOrigins = process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost';
+const allowedOrigins = rawOrigins.split(',').map((o) => o.trim());
+
 app.use(
   cors({
-    origin: true,
+    origin: (origin, callback) => {
+      // Brak origin = same-origin / curl / mobilne native — przepuść
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origin "${origin}" not allowed`));
+      }
+    },
     credentials: true,
   }),
 );

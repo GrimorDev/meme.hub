@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { formatPost } from '../utils.js';
+import { sanitizeField } from '../utils/sanitize.js';
 
 const router = Router();
 
@@ -140,12 +141,18 @@ router.post('/', requireAuth, async (req, res) => {
       mediaType?: string;
     };
 
-    if (!url || !caption) {
+    const cleanCaption = sanitizeField(caption, 300);
+    const cleanDescription = sanitizeField(description, 2000);
+
+    if (!url || !cleanCaption) {
       res.status(400).json({ error: 'URL i opis są wymagane' });
       return;
     }
 
-    const tagNames: string[] = Array.isArray(tags) ? tags : [tags];
+    // Sanitizuj tagi — usuń HTML, tylko alfanumeryczne + myślnik
+    const tagNames: string[] = (Array.isArray(tags) ? tags : [tags])
+      .map((t) => sanitizeField(t, 50).toLowerCase().replace(/[^a-z0-9\-ąćęłńóśźż]/g, ''))
+      .filter(Boolean);
 
     const tagUpserts = await Promise.all(
       tagNames.filter(Boolean).map(async (name) => {
@@ -160,9 +167,9 @@ router.post('/', requireAuth, async (req, res) => {
 
     const post = await prisma.memePost.create({
       data: {
-        caption,
+        caption: cleanCaption,
         url,
-        description,
+        description: cleanDescription || null,
         authorId: req.session.userId!,
         featured: false,
         isNsfw: Boolean(isNsfw),
@@ -220,8 +227,8 @@ router.put('/:id', requireAuth, async (req, res) => {
     const updated = await prisma.memePost.update({
       where: { id: req.params.id },
       data: {
-        ...(caption !== undefined && { caption }),
-        ...(description !== undefined && { description }),
+        ...(caption !== undefined && { caption: sanitizeField(caption, 300) }),
+        ...(description !== undefined && { description: sanitizeField(description, 2000) || null }),
       },
       include: POST_INCLUDE,
     });

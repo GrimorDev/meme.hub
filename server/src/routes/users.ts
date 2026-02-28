@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { formatUser, formatPost } from '../utils.js';
+import { sanitizeField, sanitizeText } from '../utils/sanitize.js';
 
 const router = Router();
 
@@ -113,7 +114,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     let usernameUpdate: { username?: string; usernameChangedAt?: Date } = {};
     if (username !== undefined) {
       // Walidacja formatu
-      const val = username.trim();
+      const val = sanitizeText(username).trim();
       if (val.length < 3)                       { res.status(400).json({ error: 'Min. 3 znaki' }); return; }
       if (val.length > 20)                      { res.status(400).json({ error: 'Maks. 20 znaków' }); return; }
       if (!/^[A-Za-z0-9_-]+$/.test(val))        { res.status(400).json({ error: 'Tylko litery, cyfry, _ i -' }); return; }
@@ -139,7 +140,7 @@ router.put('/:id', requireAuth, async (req, res) => {
       where: { id: req.params.id },
       data: {
         ...usernameUpdate,
-        ...(description !== undefined && { description }),
+        ...(description !== undefined && { description: sanitizeField(description, 500) || null }),
         ...(avatarUrl !== undefined && { avatarUrl }),
         ...(bannerUrl !== undefined && { bannerUrl }),
         ...(settings !== undefined && { settings }),

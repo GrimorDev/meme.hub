@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { formatTimeAgo } from '../utils.js';
+import { sanitizeField } from '../utils/sanitize.js';
 
 const router = Router();
 
@@ -53,14 +54,15 @@ router.post('/posts/:id/comments', requireAuth, async (req, res) => {
       parentId?: string;
       imageUrl?: string;
     };
-    if (!text?.trim() && !imageUrl) {
+    const cleanText = sanitizeField(text, 2000);
+    if (!cleanText && !imageUrl) {
       res.status(400).json({ error: 'Treść lub obraz komentarza jest wymagany' });
       return;
     }
 
     const comment = await prisma.comment.create({
       data: {
-        text: text?.trim() || '',
+        text: cleanText,
         postId: req.params.id,
         authorId: req.session.userId!,
         parentId: parentId ?? null,

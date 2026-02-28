@@ -57,6 +57,7 @@ model Report {
   post MemePost @relation(fields: [postId], references: [id], onDelete: Cascade)
   user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([postId])
   @@map("reports")
 }
 
@@ -105,6 +106,9 @@ model MemePost {
   reports  Report[]
   savedBy  SavedPost[]
 
+  @@index([authorId])
+  @@index([createdAt(sort: Desc)])
+  @@index([featured, createdAt(sort: Desc)])
   @@map("meme_posts")
 }
 
@@ -124,6 +128,7 @@ model PostTag {
   tag  Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([postId, tagId])
+  @@index([tagId])
   @@map("post_tags")
 }
 
@@ -154,6 +159,9 @@ model Comment {
   replies Comment[]     @relation("CommentReplies")
   likes   CommentLike[]
 
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
   @@map("comments")
 }
 
@@ -190,6 +198,8 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, read])
+  @@index([userId, createdAt(sort: Desc)])
   @@map("notifications")
 }
 
@@ -232,6 +242,8 @@ model Message {
   receiver  User              @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
   reactions MessageReaction[]
 
+  @@index([senderId, receiverId, createdAt(sort: Desc)])
+  @@index([receiverId, read])
   @@map("messages")
 }
 

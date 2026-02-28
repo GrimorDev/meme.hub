@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import sharp from 'sharp';
+import { fileTypeFromBuffer } from 'file-type';
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads');
 
@@ -40,6 +41,26 @@ export const upload = multer({
 // Middleware Sharp — kompresja + resize po multerze; wideo przepuszcza as-is
 export async function processImage(req: any, _res: any, next: any) {
   if (!req.file) return next();
+
+  // ── Magic bytes validation ─────────────────────────────────
+  // Sprawdź rzeczywisty typ pliku na podstawie sygnatur binarnych (nie MIME z nagłówka)
+  const detected = await fileTypeFromBuffer(req.file.buffer);
+  const realMime = detected?.mime ?? null;
+
+  // Wideo (mp4/webm/mov) może zwracać różne warianty — sprawdź prefix
+  const isVideoMime = (m: string | null) =>
+    m != null && (m.startsWith('video/') || m === 'application/octet-stream' && VIDEO_TYPES.includes(req.file.mimetype));
+
+  const isAllowed =
+    realMime != null &&
+    (ALLOWED_TYPES.includes(realMime) || isVideoMime(realMime));
+
+  // GIF-y i wideo mogą mieć niejednoznaczne magic bytes — jeśli file-type nie wykryje ale MIME jest ok, zezwól
+  const mimeTrusted = VIDEO_TYPES.includes(req.file.mimetype) || req.file.mimetype === 'image/gif';
+
+  if (!isAllowed && !mimeTrusted) {
+    return next(new Error(`Niedozwolony typ pliku (wykryto: ${realMime ?? 'nieznany'})`));
+  }
 
   const isVideo = VIDEO_TYPES.includes(req.file.mimetype);
   const isGif   = req.file.mimetype === 'image/gif';
